@@ -3,7 +3,10 @@ version: '3.1'
 services:
   webapp:
     image: ghcr.io/spoon2eric/tvstrats:latest
+    container_name: tvstrats
     ports:
       - "5001:5001"
     volumes:
       - ./data:/var/lib/docker/volumes/tvstrats/_data
+    env_file:
+      - .env

@@ -1,11 +1,14 @@
-import collections
-import sqlite3
+import os
+from dotenv import load_dotenv
+#import collections
+#import sqlite3
 from typing import Collection
 from pymongo import MongoClient
 import os
 from dateutil.parser import parse
 import logging
 
+load_dotenv(dotenv_path="./.env")
 # MongoDB Configuration from provided main.py
 MONGO_USERNAME = os.getenv("MONGO_USERNAME")
 MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")

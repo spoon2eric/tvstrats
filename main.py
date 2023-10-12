@@ -1,8 +1,8 @@
+import os
+from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 import sqlite3
-import os
-from dotenv import load_dotenv
 import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from flask_socketio import emit, send, SocketIO
@@ -14,17 +14,18 @@ from watchdog.events import FileSystemEventHandler
 
 logging.basicConfig(level=logging.DEBUG)
 
-load_dotenv()
-# MongoDB connection information
+load_dotenv(dotenv_path="./.env")
+
 MONGO_USERNAME = os.getenv("MONGO_USERNAME")
 MONGO_PASSWORD = os.getenv("MONGO_PASSWORD")
 MONGO_IP = os.getenv("MONGO_IP")
-MONGO_PORT = os.getenv("MONGO_PORT")
+MONGO_PORT = "27017"
 MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_IP}:{MONGO_PORT}/?authMechanism=DEFAULT"
 MONGO_DATABASE = "market_data"
 MONGO_COLLECTION_MCB = "market_cipher_b"
 
 mongo_client = MongoClient(MONGO_URI)
+print(MONGO_URI)
 db = mongo_client[MONGO_DATABASE]
 collection = db[MONGO_COLLECTION_MCB]
 
@@ -235,4 +236,4 @@ setup_database()
 setup_mongodb()
 
 if __name__ == "__main__":
-    socketio.run(app, host='0.0.0.0', debug=False, port=5001)
+    socketio.run(app, host='0.0.0.0', debug=False, port=5000)
