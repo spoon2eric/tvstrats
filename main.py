@@ -68,13 +68,14 @@ def index():
     plans = get_all_plans_from_db()
 
     results = {}
+    money_flows = {}  # Initialize money_flows here
 
     # Process each ticker/plan
     for plan in plans:
         strategy_instance = PatternStrategy(plan)
         strategy_result = strategy_instance.analyze()
-        print("########", strategy_result)
-        
+        print("SR ########", strategy_result)
+
         dots = {}
         if isinstance(strategy_result, dict):
             if strategy_result.get('first_big_green_dot_time'):
@@ -92,22 +93,32 @@ def index():
             results[ticker] = {}
         results[ticker][time_frame] = dots
 
-    # Pass the results to the template
-    print("Debug: Results Dictionary:", results)
-    return render_template('index.html', data=results)
+        # Fetch the most recent "Mny Flow" for each ticker and time frame
+        current_record = collection.find_one(
+            {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
+        if current_record and 'Mny Flow' in current_record:
+            if ticker not in money_flows:
+                money_flows[ticker] = {}
+            money_flows[ticker][time_frame] = {
+                'money_flow': current_record['Mny Flow']}
+
+    print("DEBUG: Results Dictionary:", results)
+    print("DEBUG: money_flows:", money_flows)
+    return render_template('index.html', data=results, money_flow=money_flows)
+
 
 def process_log_entry(log_entry):
     """
     Processes a log entry and extracts relevant information.
     """
     result = {}
-    
+
     # Check if the log entry is of interest
     if "Big Green Dot" in log_entry:
         # Extracting relevant details
         result['ticker'] = log_entry.get('ticker', None)
         result['time_frame'] = log_entry.get('Time Frame', None)
-        
+
         # If the Big Green Dot is found for the first time, add the TV Time
         if not result.get('first_big_green_dot_time'):
             result['first_big_green_dot_time'] = log_entry.get('TV Time', None)

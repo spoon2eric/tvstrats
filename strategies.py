@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-#import collections
-#import sqlite3
+# import collections
+# import sqlite3
 from typing import Collection
 from pymongo import MongoClient
 import os
@@ -49,18 +49,18 @@ class Strategy:
 # MTBT Strategy (As an example)
 
 
-class MTBTStrategy(Strategy):
-    def fetch_data(self):
-        # Implement data fetching specific to MTBT strategy
-        pass
+# class MTBTStrategy(Strategy):
+#     def fetch_data(self):
+#         # Implement data fetching specific to MTBT strategy
+#         pass
 
-    def analyze(self):
-        # Implement data analysis specific to MTBT strategy
-        pass
+#     def analyze(self):
+#         # Implement data analysis specific to MTBT strategy
+#         pass
 
-    def update_sqlite(self):
-        # Implement SQLite updates specific to MTBT strategy
-        pass
+#     def update_sqlite(self):
+#         # Implement SQLite updates specific to MTBT strategy
+#         pass
 
 
 class PatternStrategy(Strategy):
@@ -75,6 +75,7 @@ class PatternStrategy(Strategy):
     def find_pattern_sequence(self):
         time_frame = self.time_frame
         ticker_symbol = self.ticker_symbol
+
         # Add logging statements here to debug
         logging.debug(f"Time Frame: {time_frame}")
         logging.debug(f"Ticker Symbol: {ticker_symbol}")
@@ -144,9 +145,25 @@ class PatternStrategy(Strategy):
         # Step 0: Find the latest Big Green Dot
         big_green_dot = mongo_collection.find_one(
             {"Time Frame": time_frame, "ticker": ticker_symbol, "Buy": "1"}, sort=[('TV Time', -1)])
+        print("DEBUG: big_green_dot:", big_green_dot)
+
+        # Check if big_green_dot exists and assign its value to big_green_dot_money_flow
+        if big_green_dot:
+            big_green_dot_money_flow = float(big_green_dot["Mny Flow"])
+        else:
+            # Handle the case where there's no matching record in the database.
+            # For example, you might set a default value or log a warning.
+            big_green_dot_money_flow = 0.0  # or some other default value
+
+        # Look at Money Flow
+        print("DEBUG: Before accessing Mny Flow")
+        if big_green_dot_money_flow > 0:
+            logging.debug("Money Flow is Green for Big Green Dot")
+        else:
+            logging.debug("Money Flow is Red for Big Green Dot")
 
         logging.debug(f"Big Green Dot found: {big_green_dot}")
-        logging.debug(f"Big Green Dot Query Result: {big_green_dot}")
+        logging.debug(f"Big Green Dot Money Flow: {big_green_dot_money_flow}")
 
         if not big_green_dot:
             logging.debug("No Big Green Dot found.")
@@ -185,10 +202,10 @@ class PatternStrategy(Strategy):
 
         dots_found["message"] = message
         dots_found["first_big_green_dot_time"] = big_green_dot['TV Time']
-        print("Debug: Big Green Dot Time:", dots_found["first_big_green_dot_time"])
-        
-        return dots_found
+        print("Debug: Big Green Dot Time:",
+              dots_found["first_big_green_dot_time"])
 
+        return dots_found
 
 
 # Utility Functions

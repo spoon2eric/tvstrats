@@ -61,6 +61,7 @@
             padding: 8px;
             border-bottom: 1px solid #333;
             /* Dark table cell border */
+            text-align: center;
         }
 
         th {
@@ -68,6 +69,10 @@
             /* Dark table header background */
             color: #e0e0e0;
             /* Table header text color */
+        }
+
+        td.results {
+            text-align: left;
         }
 
         tr:hover {
@@ -98,9 +103,8 @@
         <!-- Table header -->
         <thead>
             <tr>
-                <th>Ticker Symbol</th>
                 <th>Time Frame</th>
-                <th>Results</th>
+                <th></th>
             </tr>
         </thead>
         <tbody>
@@ -108,14 +112,23 @@
             {% for ticker, details in data.items() %}
             <!-- Ticker header -->
             <tr class="ticker-header">
-                <td colspan="3">{{ ticker }}</td>
+                <td colspan="2">{{ ticker }}</td>
             </tr>
             <!-- Ticker details -->
             {% for time_frame, result in details.items() %}
             <tr>
-                <td>{{ ticker }}</td>
                 <td>{{ time_frame }}</td>
-                <td>
+                <td class="results">
+                    {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
+                    {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
+                    <span style="color: {{ 'green' if mf_value > 0 else 'red' }}">
+                        MF: {{ mf_value|round(2) }}
+                    </span>
+                    <br>
+                    {% else %}
+                    Money Flow: Not Available
+                    {% endif %}
+
                     {% if 'first_big_green_dot_time' in result %}
                     {{ data[ticker][time_frame].first_big_green_dot_time }}
                     {% endif %}
