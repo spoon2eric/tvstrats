@@ -192,7 +192,7 @@ class PatternStrategy(Strategy):
                 dots_found["breakout_time"] = green_dot['TV Time']
             else:
                 logging.debug(f"No Green Dot found after Red Dot.")
-                return "No Green Dot found after Red Dot."
+                #return "No Green Dot found after Red Dot."
 
         # Step 3: Action or Alert
         if dots_found["red_dot_time"] and dots_found["breakout_time"]:
