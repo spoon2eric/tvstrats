@@ -5,7 +5,7 @@ from dateutil.parser import parse
 import sqlite3
 import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-from flask_socketio import emit, send, SocketIO
+#from flask_socketio import emit, send, SocketIO
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from strategies import PatternStrategy
@@ -38,8 +38,8 @@ DATABASE = os.path.join(DATA_DIR, 'database.db')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 app = Flask(__name__)
-app.secret_key = 'asdfasdf332fsdfawefsadf2f3daf'
-socketio = SocketIO(app, cors_allowed_origins="*")
+# app.secret_key = 'asdfasdf332fsdfawefsadf2f3daf'
+# socketio = SocketIO(app, cors_allowed_origins="*")
 
 
 def query_db(query, args=(), one=False):
@@ -115,7 +115,7 @@ def trades():
     trades_data = []
 
     for ticker in tickers:
-        trades_for_ticker = list(trades_collection.find({'Ticker': ticker}).sort([('TV Time', -1)]).limit(5))
+        trades_for_ticker = list(trades_collection.find({'Ticker': ticker}).sort([('TV Time', -1)]).limit(10))
         trades_data.extend(trades_for_ticker)
 
     return render_template('trades.html', trades=trades_data)
@@ -215,15 +215,15 @@ def insert_time_frame_for_ticker(ticker_id, time_frame):
     conn.close()
 
 
-@socketio.on('connect')
-def handle_connect():
-    print("Client Connected")
-    emit('response', {'data': 'connected'})
+# @socketio.on('connect')
+# def handle_connect():
+#     print("Client Connected")
+#     emit('response', {'data': 'connected'})
 
 
-@socketio.on('disconnect')
-def handle_disconnect():
-    print("Client Disconnected")
+# @socketio.on('disconnect')
+# def handle_disconnect():
+#     print("Client Disconnected")
 
 
 def setup_database():
@@ -260,5 +260,8 @@ def setup_mongodb():
 setup_database()
 setup_mongodb()
 
+# if __name__ == "__main__":
+#     socketio.run(app, host='0.0.0.0', debug=False, port=5000)
 if __name__ == "__main__":
-    socketio.run(app, host='0.0.0.0', debug=False, port=5000)
+    app.run(host='0.0.0.0', debug=False, port=5000)
+
