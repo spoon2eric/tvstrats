@@ -23,11 +23,13 @@ MONGO_PORT = "27017"
 MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_IP}:{MONGO_PORT}/?authMechanism=DEFAULT"
 MONGO_DATABASE = "market_data"
 MONGO_COLLECTION_MCB = "market_cipher_b"
+MONGO_COLLECTION_TRADES = "trades"
 
 mongo_client = MongoClient(MONGO_URI)
 print(MONGO_URI)
 db = mongo_client[MONGO_DATABASE]
 collection = db[MONGO_COLLECTION_MCB]
+trades_collection = db[MONGO_COLLECTION_TRADES]
 
 # Directory of the script or current file.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -74,7 +76,6 @@ def index():
     for plan in plans:
         strategy_instance = PatternStrategy(plan)
         strategy_result = strategy_instance.analyze()
-        print("SR ########", strategy_result)
 
         dots = {}
         if isinstance(strategy_result, dict):
@@ -102,9 +103,22 @@ def index():
             money_flows[ticker][time_frame] = {
                 'money_flow': current_record['Mny Flow']}
 
-    print("DEBUG: Results Dictionary:", results)
-    print("DEBUG: money_flows:", money_flows)
+    #print("DEBUG: Results Dictionary:", results)
+    #print("DEBUG: money_flows:", money_flows)
     return render_template('index.html', data=results, money_flow=money_flows)
+
+
+@app.route('/trades')
+def trades():
+    # Fetch the last 5 trades for each ticker from the trades collection
+    tickers = trades_collection.distinct("Ticker")
+    trades_data = []
+
+    for ticker in tickers:
+        trades_for_ticker = list(trades_collection.find({'Ticker': ticker}).sort([('TV Time', -1)]).limit(5))
+        trades_data.extend(trades_for_ticker)
+
+    return render_template('trades.html', trades=trades_data)
 
 
 def process_log_entry(log_entry):

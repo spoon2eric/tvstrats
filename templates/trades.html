@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tradingview Alerts</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #181818;
+            /* Main dark background */
+            color: #e0e0e0;
+            /* Main light text color */
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #2d2d2d;
+            /* Dark header background */
+            color: #ffffff;
+            text-align: center;
+            padding: 1em;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-around;
+            background: #232323;
+            /* Dark navigation background */
+        }
+
+        nav a {
+            color: #b8b8b8;
+            /* Link color */
+            text-decoration: none;
+            text-align: center;
+            padding: 1em;
+        }
+
+        nav a:hover {
+            color: #ffffff;
+            /* Link color on hover */
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th,
+        td {
+            padding: 8px;
+            border-bottom: 1px solid #333;
+            /* Dark table cell border */
+            text-align: center;
+        }
+
+        th {
+            background-color: #333;
+            /* Dark table header background */
+            color: #e0e0e0;
+            /* Table header text color */
+        }
+
+        td.results {
+            text-align: left;
+        }
+
+        tr:hover {
+            background-color: #232323;
+            /* Lighter row hover effect */
+        }
+
+        tr.ticker-header {
+            background-color: #2d2d2d;
+            /* Differentiated dark ticker header background */
+            color: #ffffff;
+            /* White text for ticker header */
+            font-weight: bold;
+        }
+
+        td span.dot {
+            font-size: 24px;
+            vertical-align: middle;
+        }
+
+        /* Container for all cards */
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+            /* Adjust for desired space between cards */
+        }
+
+        /* Individual card styles */
+        .card {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 300px;
+            /* Adjust based on desired minimum card width */
+        }
+
+        .card-header {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Last 5 Trades</h1>
+    </header>
+    <!-- Navigation bar -->
+    <nav>
+        <!-- Links to both pages -->
+        <a href="/">Home</a>
+        <a href="/trades">Trades</a>
+    </nav>
+    <div class="container"> <!-- Flexbox container -->
+
+        <!-- Group by ticker -->
+        {% for ticker, trades_list in trades|groupby('Ticker') %}
+        <div class="card"> <!-- Start of card -->
+            <h2 class="card-header">{{ ticker }}</h2> <!-- Ticker name as card header -->
+
+            <table>
+                <!-- Table header -->
+                <thead>
+                    <tr>
+                        <th>Time Frame</th>
+                        <th>TV Time</th>
+                        <th>Trade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Loop through the trades for the current ticker -->
+                    {% for trade in trades_list %}
+                    <tr>
+                        <td>{{ trade['Time Frame'] }}</td>
+                        <td>{{ trade['TV Time'] }}</td>
+                        <td class="results">{{ trade.Trade }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div> <!-- End of card -->
+        {% endfor %}
+
+    </div> <!-- End of Flexbox container -->
+</body>
+
+</html>
