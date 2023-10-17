@@ -107,8 +107,6 @@ def index():
             money_flows[ticker][time_frame] = {
                 'money_flow': current_record['Mny Flow']}
 
-    #print("DEBUG: Results Dictionary:", results)
-    #print("DEBUG: money_flows:", money_flows)
     return render_template('index.html', data=results, money_flow=money_flows)
 
 
@@ -166,7 +164,7 @@ def dots():
     except Exception as e:
         # Handle errors and perhaps return a message to the user or log the error
         print(f"An error occurred: {e}")
-        return render_template('error.html', error_message=str(e))  # Assuming you have an error template to display the error message.
+        return render_template('error.html', error_message=str(e))
 
 
 def process_log_entry(log_entry):
@@ -269,17 +267,6 @@ def insert_time_frame_for_ticker(ticker_id, time_frame):
 
     conn.commit()
     conn.close()
-
-
-# @socketio.on('connect')
-# def handle_connect():
-#     print("Client Connected")
-#     emit('response', {'data': 'connected'})
-
-
-# @socketio.on('disconnect')
-# def handle_disconnect():
-#     print("Client Disconnected")
 
 
 def setup_database():

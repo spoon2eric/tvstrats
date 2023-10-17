@@ -63,10 +63,6 @@ class PatternStrategy(Strategy):
         time_frame = self.time_frame
         ticker_symbol = self.ticker_symbol
 
-        # Add logging statements here to debug
-        #logging.debug(f"Time Frame: {time_frame}")
-        #logging.debug(f"Ticker Symbol: {ticker_symbol}")
-
         def find_next_dot(current_time, direction):
             """
             Find the next Red Dot or Green Dot after the provided time based on the direction.
@@ -74,18 +70,6 @@ class PatternStrategy(Strategy):
             #logging.debug("Entering find_next_dot function")
             field = 'Blue Wave Crossing UP' if direction == 'up' else 'Blue Wave Crossing Down'
             parsed_time = parse(current_time)
-
-            # Log the query parameters
-            #logging.debug(
-            #    f"Query Parameters - field: {field}, TV Time: {parsed_time.isoformat()}, Time Frame: {time_frame}, ticker: {ticker_symbol}")
-
-            count = mongo_collection.count_documents({
-                field: {'$ne': "null"},
-                'TV Time': {'$gt': parsed_time.isoformat()},
-                "Time Frame": time_frame,
-                "ticker": ticker_symbol
-            })
-            #logging.debug(f"Number of Records Returned: {count}")
 
             # Redefine the cursor here:
             cursor = mongo_collection.find({
@@ -98,7 +82,7 @@ class PatternStrategy(Strategy):
                 try:
                     value = float(record[field])
                     if direction == 'down':
-                        if value > 0:  # Found a red dot with value > 0
+                        if value > 10:  # Found a red dot with value > 0
                             # logging.debug(
                             #     f"Found Red Dot at {record['TV Time']}: {record[field]}")
                             return record
@@ -133,24 +117,6 @@ class PatternStrategy(Strategy):
         big_green_dot = mongo_collection.find_one(
             {"Time Frame": time_frame, "ticker": ticker_symbol, "Buy": "1"}, sort=[('TV Time', -1)])
         print("DEBUG: big_green_dot:", big_green_dot)
-
-        # Check if big_green_dot exists and assign its value to big_green_dot_money_flow
-        # if big_green_dot:
-        #     big_green_dot_money_flow = float(big_green_dot["Mny Flow"])
-        # else:
-        #     # Handle the case where there's no matching record in the database.
-        #     # For example, you might set a default value or log a warning.
-        #     big_green_dot_money_flow = 0.0  # or some other default value
-
-        # Look at Money Flow
-        # print("DEBUG: Before accessing Mny Flow")
-        # if big_green_dot_money_flow > 0:
-        #     logging.debug("Money Flow is Green for Big Green Dot")
-        # else:
-        #     logging.debug("Money Flow is Red for Big Green Dot")
-
-        #logging.debug(f"Big Green Dot found: {big_green_dot}")
-        #logging.debug(f"Big Green Dot Money Flow: {big_green_dot_money_flow}")
 
         if not big_green_dot:
             logging.debug("No Big Green Dot found.")
