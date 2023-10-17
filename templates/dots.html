@@ -115,22 +115,36 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
         }
+
+        .dot {
+            height: 15px;
+            width: 15px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        .red {
+            background-color: red;
+        }
+
+        .green {
+            background-color: green;
+        }
     </style>
 </head>
 
 <body>
     <header>
-        <h1>MTBT Strategy</h1>
+        <h1>Dots</h1>
     </header>
     <nav>
-        <!-- Links to pages -->
+        <!-- Links to both pages -->
         <a href="/">Home</a>
         <a href="/dots">Dots</a>
         <a href="/trades">Trades</a>
     </nav>
-
-    <div class="container"> <!-- Flexbox container -->
-        {% for ticker, details in data.items() %}
+    <div class="container"> <!-- Start of Flexbox container -->
+        {% for ticker, time_frames in grouped_results.items() %}
         <div class="card"> <!-- Start of card -->
             <h2 class="card-header">{{ ticker }}</h2> <!-- Ticker name as card header -->
 
@@ -144,32 +158,11 @@
                 </thead>
                 <tbody>
                     <!-- Ticker details -->
-                    {% for time_frame, result in details.items() %}
+                    {% for time_frame, dot_color in time_frames.items() %}
                     <tr>
                         <td>{{ time_frame }}</td>
                         <td class="results">
-                            {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
-                            {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
-                            <span style="color: {{ 'green' if mf_value > 0 else 'red' }}">
-                                MF: {{ mf_value|round(2) }}
-                            </span>
-                            <br>
-                            {% else %}
-                            Money Flow: Not Available
-                            {% endif %}
-
-                            {% if 'first_big_green_dot_time' in result %}
-                            {{ data[ticker][time_frame].first_big_green_dot_time }}
-                            {% endif %}
-                            {% if 'big_green_dot_time' in result or 'first_big_green_dot_time' in result %}
-                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
-                            {% endif %}
-                            {% if 'red_dot_time' in result %}
-                            <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
-                            {% endif %}
-                            {% if 'green_dot_time' in result %}
-                            <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
-                            {% endif %}
+                            <span class="dot" style="color: {{ dot_color }};">⬤</span> <!-- Dot Color -->
                         </td>
                     </tr>
                     {% endfor %}
@@ -178,6 +171,7 @@
         </div> <!-- End of card -->
         {% endfor %}
     </div> <!-- End of Flexbox container -->
+
 </body>
 
 </html>

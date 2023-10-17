@@ -57,10 +57,14 @@ class FileChangeHandler(FileSystemEventHandler):
             print("tickers.txt has been modified, updating tickers...")
             # This will re-read the tickers from the file.
             get_all_tickers_from_file()
+        elif event.src_path == './dot_tickers.txt':
+            print("dot_tickers.txt has been modified, updating dot tickers...")
+            # This will re-read the dot tickers from the file.
+            get_all_dot_tickers_from_file()
 
 
 observer = Observer()
-observer.schedule(FileChangeHandler(), path='./tickers.txt', recursive=False)
+observer.schedule(FileChangeHandler(), path='.', recursive=False)
 observer.start()
 
 
@@ -120,6 +124,50 @@ def trades():
 
     return render_template('trades.html', trades=trades_data)
 
+@app.route('/dots')
+def dots():
+    try:
+        # 1. Get the tickers from dot_tickers.txt file using the function
+        dot_tickers = get_all_dot_tickers_from_file()
+        print("Read tickers from dot_tickers.txt:", dot_tickers)
+
+        results = []
+
+        # 2. Query MongoDB for each ticker and timeframe
+        for ticker, time_frame in dot_tickers:
+            # Find the most recent record with a non-null Blue Wave Crossing UP or Down
+            record = collection.find_one(
+                {"Time Frame": time_frame, "ticker": ticker, "$or": [{"Blue Wave Crossing UP": {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
+                sort=[('TV Time', -1)]
+            )
+
+            print("record for", ticker, time_frame, ":", record)
+
+            if not record:
+                continue
+
+            if record['Blue Wave Crossing UP'] != "null":
+                dot_color = 'green'
+            else:  # If UP is null, then DOWN should be not-null
+                dot_color = 'red'
+
+            results.append((ticker, time_frame, dot_color))
+
+        # Convert results to a nested dictionary for easy use in the template
+        grouped_results = {}
+        for ticker, time_frame, dot_color in results:
+            if ticker not in grouped_results:
+                grouped_results[ticker] = {}
+            grouped_results[ticker][time_frame] = dot_color
+
+        # 3. Render the dots.html template
+        return render_template('dots.html', grouped_results=grouped_results)
+
+    except Exception as e:
+        # Handle errors and perhaps return a message to the user or log the error
+        print(f"An error occurred: {e}")
+        return render_template('error.html', error_message=str(e))  # Assuming you have an error template to display the error message.
+
 
 def process_log_entry(log_entry):
     """
@@ -146,6 +194,14 @@ def get_all_tickers_from_file():
             ticker, time_frame = line.strip().split(', ')
             plans.append({"ticker_symbol": ticker, "time_frame": time_frame})
     return plans
+
+def get_all_dot_tickers_from_file():
+    dot_tickers = []
+    with open('dot_tickers.txt', 'r') as f:
+        for line in f.readlines():
+            ticker, time_frame = line.strip().split(', ')
+            dot_tickers.append((ticker, time_frame))
+    return dot_tickers
 
 
 def get_all_plans_from_db():
