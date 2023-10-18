@@ -1,16 +1,18 @@
 import os
+import io
+import sys
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from dateutil.parser import parse
-import sqlite3
 import logging
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-#from flask_socketio import emit, send, SocketIO
-from pymongo import MongoClient
+# from flask_socketio import emit, send, SocketIO
+from pymongo import MongoClient, DESCENDING
 from pymongo.errors import PyMongoError
-from strategies import PatternStrategy
+# from strategies import PatternStrategy
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from telegram_notifier import send_telegram_message
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -41,14 +43,20 @@ app = Flask(__name__)
 # app.secret_key = 'asdfasdf332fsdfawefsadf2f3daf'
 # socketio = SocketIO(app, cors_allowed_origins="*")
 
+##########
 
-def query_db(query, args=(), one=False):
-    """Utility function to query the SQLite3 database."""
-    with sqlite3.connect(DATABASE) as con:
-        cur = con.cursor()
-        result = cur.execute(query, args).fetchall()
-        cur.close()
-        return (result[0] if result else None) if one else result
+
+class MongoConnection:
+    def __init__(self, db_name):
+        self.MONGO_URI = f"mongodb://spoon2eric:Mtu19355%24@192.168.79.50:27017/?authMechanism=DEFAULT"
+        self.db_name = db_name
+
+    def __enter__(self):
+        self.client = MongoClient(self.MONGO_URI)
+        return self.client[self.db_name]
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.client.close()
 
 
 class FileChangeHandler(FileSystemEventHandler):
@@ -67,47 +75,62 @@ observer = Observer()
 observer.schedule(FileChangeHandler(), path='.', recursive=False)
 observer.start()
 
+################################
+# New route
+
 
 @app.route('/')
 def index():
-    # Retrieve tickers/plans from the database
-    plans = get_all_plans_from_db()
+    money_flows = {}
+    with MongoConnection("market_data") as db:
+        raw_results, logs = analyze_data(db, "./tickers.txt")
 
-    results = {}
-    money_flows = {}  # Initialize money_flows here
+        # Transform results to match the expected structure
+        transformed_results = {}
+        for (ticker, time_frame), stage in raw_results.items():
 
-    # Process each ticker/plan
-    for plan in plans:
-        strategy_instance = PatternStrategy(plan)
-        strategy_result = strategy_instance.analyze()
+            # Check and set a default value for stage if it's None
+            if stage is None:
+                stage = -1  # Or any other suitable default value
 
-        dots = {}
-        if isinstance(strategy_result, dict):
-            if strategy_result.get('first_big_green_dot_time'):
-                dots['first_big_green_dot_time'] = strategy_result['first_big_green_dot_time']
-            if strategy_result.get('red_dot_time'):
-                dots['red_dot_time'] = True
-            if strategy_result.get('breakout_time'):
-                dots['green_dot_time'] = True
+            if ticker not in transformed_results:
+                transformed_results[ticker] = {}
+            big_green_dot_time = None
+            if stage >= 1:
+                big_green_dot_time = find_big_green_dot(
+                    db['market_cipher_b'], ticker, time_frame)
+            transformed_results[ticker][time_frame] = {
+                'stage': stage,
+                'first_big_green_dot_time': big_green_dot_time
+            }
 
-        # Organize results based on ticker_symbol then time_frame
-        ticker = plan['ticker_symbol']
-        time_frame = plan['time_frame']
+            # Fetch the most recent "Mny Flow" for each ticker and time frame
+            current_record = db['market_cipher_b'].find_one(
+                {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
+            if current_record and 'Mny Flow' in current_record:
+                if ticker not in money_flows:
+                    money_flows[ticker] = {}
+                money_flows[ticker][time_frame] = {
+                    'money_flow': current_record['Mny Flow']}
 
-        if ticker not in results:
-            results[ticker] = {}
-        results[ticker][time_frame] = dots
+    print(transformed_results)
 
-        # Fetch the most recent "Mny Flow" for each ticker and time frame
-        current_record = collection.find_one(
-            {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
-        if current_record and 'Mny Flow' in current_record:
-            if ticker not in money_flows:
-                money_flows[ticker] = {}
-            money_flows[ticker][time_frame] = {
-                'money_flow': current_record['Mny Flow']}
+    return render_template('index.html', data=transformed_results, money_flow=money_flows)
 
-    return render_template('index.html', data=results, money_flow=money_flows)
+
+# End of New route
+
+def group_results_by_ticker(results):
+    """
+    Group the analysis results by ticker symbol.
+    """
+    grouped = {}
+    for (ticker, time_frame), stage in results.items():
+        if ticker not in grouped:
+            grouped[ticker] = {}
+        grouped[ticker][time_frame] = stage
+    return grouped
+################################
 
 
 @app.route('/trades')
@@ -117,10 +140,12 @@ def trades():
     trades_data = []
 
     for ticker in tickers:
-        trades_for_ticker = list(trades_collection.find({'Ticker': ticker}).sort([('TV Time', -1)]).limit(10))
+        trades_for_ticker = list(trades_collection.find(
+            {'Ticker': ticker}).sort([('TV Time', -1)]).limit(10))
         trades_data.extend(trades_for_ticker)
 
     return render_template('trades.html', trades=trades_data)
+
 
 @app.route('/dots')
 def dots():
@@ -134,10 +159,12 @@ def dots():
         # 2. Query MongoDB for each ticker and timeframe
         for ticker, time_frame in dot_tickers:
             # Find the most recent record with a non-null Blue Wave Crossing UP or Down
-            record = collection.find_one(
-                {"Time Frame": time_frame, "ticker": ticker, "$or": [{"Blue Wave Crossing UP": {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
-                sort=[('TV Time', -1)]
-            )
+            with MongoConnection("market_data") as db:
+                record = db[MONGO_COLLECTION_MCB].find_one(
+                    {"Time Frame": time_frame, "ticker": ticker, "$or": [{"Blue Wave Crossing UP":
+                                                                          {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
+                    sort=[('TV Time', -1)]
+                )
 
             print("record for", ticker, time_frame, ":", record)
 
@@ -193,6 +220,7 @@ def get_all_tickers_from_file():
             plans.append({"ticker_symbol": ticker, "time_frame": time_frame})
     return plans
 
+
 def get_all_dot_tickers_from_file():
     dot_tickers = []
     with open('dot_tickers.txt', 'r') as f:
@@ -202,109 +230,218 @@ def get_all_dot_tickers_from_file():
     return dot_tickers
 
 
-def get_all_plans_from_db():
-    return get_all_tickers_from_file()
-
-
-@app.route('/settings', methods=['GET', 'POST'])
-def settings():
-    if request.method == 'POST':
-        ticker_symbol = request.form.get('ticker_symbol')
-        time_frame = request.form.get('time_frame')
-
-        # Insert or update the ticker in the tickers table
-        ticker_id = insert_or_get_ticker(ticker_symbol)
-
-        # Insert the time frame for the ticker
-        insert_time_frame_for_ticker(ticker_id, time_frame)
-
-        return redirect(url_for('index'))
-
-    return render_template('settings.html')
-
-
-@app.route('/clear_data', methods=['POST'])
-def clear_data():
-    try:
-        with sqlite3.connect(DATABASE) as conn:
-            cursor = conn.cursor()
-
-            # Delete data from the 'tickers' table
-            cursor.execute("DELETE FROM tickers")
-
-            # Delete data from the 'ticker_time_frames' table
-            cursor.execute("DELETE FROM ticker_time_frames")
-
-            conn.commit()
-            flash("Data cleared successfully", "success")
-    except Exception as e:
-        flash(f"Failed to clear data: {str(e)}", "error")
-
-    return redirect(url_for('settings'))
-
-
-def insert_or_get_ticker(ticker):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT OR IGNORE INTO tickers (name) VALUES (?)", (ticker,))
-    cursor.execute("SELECT id FROM tickers WHERE name = ?", (ticker,))
-    ticker_id = cursor.fetchone()[0]
-
-    conn.commit()
-    conn.close()
-
-    return ticker_id
-
-
-def insert_time_frame_for_ticker(ticker_id, time_frame):
-    conn = sqlite3.connect(DATABASE)
-    cursor = conn.cursor()
-
-    cursor.execute(
-        "INSERT OR IGNORE INTO ticker_time_frames (ticker_id, duration) VALUES (?, ?)", (ticker_id, time_frame))
-
-    conn.commit()
-    conn.close()
-
-
-def setup_database():
-    logging.info("Setting up database...")
-    try:
-        conn = sqlite3.connect(DATABASE)
-        cursor = conn.cursor()
-        with open('schema.sql', 'r') as f:
-            cursor.executescript(f.read())
-        conn.commit()
-        logging.info("Database setup completed successfully.")
-    except Exception as e:
-        logging.error(f"Error setting up database: {e}")
-    finally:
-        if conn:
-            conn.close()
-
-
 def setup_mongodb():
     logging.info("Setting up MongoDB...")
     try:
-        mongo_client = MongoClient(MONGO_URI)
-        db = mongo_client[MONGO_DATABASE]
-        if MONGO_COLLECTION_MCB not in db.list_collection_names():
-            db.create_collection(MONGO_COLLECTION_MCB)
-            logging.info(f"Collection {MONGO_COLLECTION_MCB} created.")
-        else:
-            logging.info(f"Collection {MONGO_COLLECTION_MCB} already exists.")
-        logging.info("MongoDB setup completed successfully.")
+        with MongoConnection(MONGO_DATABASE) as db:
+            if MONGO_COLLECTION_MCB not in db.list_collection_names():
+                db.create_collection(MONGO_COLLECTION_MCB)
+                logging.info(f"Collection {MONGO_COLLECTION_MCB} created.")
+            else:
+                logging.info(
+                    f"Collection {MONGO_COLLECTION_MCB} already exists.")
+            logging.info("MongoDB setup completed successfully.")
     except Exception as e:
         logging.error(f"Error setting up MongoDB: {e}")
 
 
-setup_database()
+################################
+def read_config_file(path):
+    with open(path, 'r') as f:
+        lines = f.readlines()
+        return [tuple(line.strip().split(', ')) for line in lines]
+
+
+def analyze_sequence_from_big_green_dot(collection, ticker, time_frame):
+    # Find the most recent big green dot
+    start_time = find_big_green_dot(collection, ticker, time_frame)
+
+    # If there's no big green dot, we can't proceed
+    if not start_time:
+        print(
+            f"No Big Green Dot found for {ticker} in {time_frame} time frame.")
+        return
+
+    # Start the sequence analysis
+    stage = analyze_dots_for_sequence(
+        collection, start_time, ticker, time_frame)
+
+    # If the sequence is broken, find the next big green dot and restart the sequence analysis
+    while stage == -1:
+        # Update the start_time to one second after the last processed time to avoid reprocessing the same data
+        if start_time.endswith('Z'):
+            start_time = start_time[:-1]
+        updated_start_time = datetime.fromisoformat(
+            start_time) + timedelta(seconds=1)
+
+        # Convert back to string format
+        updated_start_time_str = updated_start_time.isoformat() + "Z"
+
+        start_time = find_big_green_dot(collection, ticker, time_frame)
+
+        # If there's no new big green dot, exit the loop
+        if not start_time or start_time <= updated_start_time_str:
+            break
+
+        stage = analyze_dots_for_sequence(
+            collection, start_time, ticker, time_frame)
+
+    return stage or -1
+
+
+def find_big_green_dot(collection, ticker, time_frame):
+    """
+    Search for the most recent record with the specified ticker and time frame where "Buy" is "1".
+    Extract "TV Time" from that record and return it.
+    """
+    record = collection.find_one({
+        "ticker": ticker,
+        "Time Frame": time_frame,
+        "Buy": "1"
+    }, sort=[("TV Time", DESCENDING)])
+    # Debug statement
+    print(f"Record for {ticker} and {time_frame}: {record}")
+
+    if record:
+        log_dot('Big Green', record, stage=1)
+        # Debug statement
+        print(
+            f"Returning 'TV Time' for {ticker} and {time_frame}: {record['TV Time']}")
+        return record["TV Time"]
+    return None
+
+
+def get_records_after_time(collection, start_time, ticker, time_frame):
+    """
+    Fetch records after the start_time for the specified ticker and time frame.
+    Sort them in ascending order based on "TV Time".
+    """
+    records = collection.find({
+        "TV Time": {"$gt": start_time},
+        "ticker": ticker,
+        "Time Frame": time_frame
+    }).sort("TV Time", 1)
+
+    return list(records)
+
+
+# Create a global variable to store the logs
+logs = []
+
+
+def log_dot(dot_type, record, stage=None):
+    """
+    Log the found dot (either Red or Green) for debugging.
+    """
+    log_message = ""
+    if stage:
+        log_message = f"Stage {stage} completed: {dot_type} Dot for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {record['Blue Wave Crossing UP' if dot_type == 'Green' else 'Blue Wave Crossing Down']}"
+    else:
+        log_message = f"{dot_type} Dot found for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {record['Blue Wave Crossing UP' if dot_type == 'Green' else 'Blue Wave Crossing Down']}"
+
+    logs.append(log_message)
+
+
+def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
+    stage = 1
+    last_red_dot_value = float('-inf')
+    stage_2_red_dot_value = None
+    last_processed_record = None
+
+    records = get_records_after_time(
+        collection, start_time, ticker, time_frame)
+
+    for record in records:
+        if stage == 1:
+            red_dot_value_str = record['Blue Wave Crossing Down']
+            if red_dot_value_str is not None and red_dot_value_str != 'null':
+                red_dot_value = float(red_dot_value_str)
+                if red_dot_value > 2 and red_dot_value < 53:  # Change this value to find First Red Dot
+                    stage = 2
+                    stage_2_red_dot_value = red_dot_value
+                    log_dot('Red', record, stage=2)
+                else:
+                    log_dot('Red', record)
+                if red_dot_value > last_red_dot_value and red_dot_value < 0:
+                    last_red_dot_value = red_dot_value
+
+        elif stage == 2:
+            red_dot_value_str = record['Blue Wave Crossing Down']
+            green_dot_value_str = record['Blue Wave Crossing UP']
+
+            if red_dot_value_str is not None and red_dot_value_str != 'null':
+                red_dot_value = float(red_dot_value_str)
+                if red_dot_value > stage_2_red_dot_value:
+                    print(
+                        f"Breaking sequence: Found Red Dot for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {red_dot_value} which is higher than Stage 2 Red Dot value.")
+                    stage = -1  # Indicate a broken sequence
+                    break
+
+            if green_dot_value_str is not None and green_dot_value_str != 'null':
+                green_dot_value = float(green_dot_value_str)
+                if green_dot_value < 0:
+                    stage = 3
+                    log_dot('Green', record, stage=3)
+
+                    # Insert/update the trade record after detecting Stage 3
+                    unique_criteria = {
+                        "Time Frame": time_frame,
+                        "TV Time": record['TV Time'],
+                        "Ticker": ticker
+                    }
+                    update_data = {
+                        "$setOnInsert": {
+                            "Trade": "Buy"
+                        }
+                    }
+                    with MongoConnection("market_data") as db:
+                        db['trades'].update_one(unique_criteria, update_data, upsert=True)
+
+                    try:
+                        # Notify Telegram
+                        message = f"Trade Alert! Buy for {ticker} at {record['TV Time']} (Time Frame: {time_frame})"
+                        send_telegram_message(message)
+                    except Exception as e:
+                        logging.error(f"Failed to send Telegram message. Error: {e}")
+
+                    break
+                else:
+                    log_dot('Green', record)
+
+        last_processed_record = record
+
+    if stage == 2:
+        print(
+            f"Stage 2 Red Dot found for {ticker} at {last_processed_record['TV Time']} (Time Frame: {time_frame}). Waiting for Stage 3 Green Dot.")
+    elif stage == -1:
+        print(
+            f"Sequence broken for {ticker} at {last_processed_record['TV Time']} (Time Frame: {time_frame}). Waiting for another Big Green Dot.")
+
+    return stage
+
+
+def analyze_data(db, config_file_path):
+    # Redirect the standard output to a StringIO object to capture the logs
+    old_stdout = sys.stdout
+    new_stdout = io.StringIO()
+    sys.stdout = new_stdout
+
+    ticker_time_pairs = read_config_file(config_file_path)
+
+    results = {}
+    for ticker, time_frame in ticker_time_pairs:
+        stage = analyze_sequence_from_big_green_dot(
+            db['market_cipher_b'], ticker, time_frame)
+        results[(ticker, time_frame)] = stage
+
+    # Reset the standard output
+    sys.stdout = old_stdout
+
+    # Return the results and the captured logs
+    return results, new_stdout.getvalue().splitlines()
+
+
 setup_mongodb()
 
-# if __name__ == "__main__":
-#     socketio.run(app, host='0.0.0.0', debug=False, port=5000)
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
-

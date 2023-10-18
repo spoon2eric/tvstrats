@@ -158,17 +158,24 @@
                             Money Flow: Not Available
                             {% endif %}
 
-                            {% if 'first_big_green_dot_time' in result %}
-                            {{ data[ticker][time_frame].first_big_green_dot_time }}
+                            <!-- Display the 'TV Time' value for Big Green Dot if present -->
+                            {% if result['first_big_green_dot_time'] %}
+                            {{ result['first_big_green_dot_time'] }}
+                            <br>
                             {% endif %}
-                            {% if 'big_green_dot_time' in result or 'first_big_green_dot_time' in result %}
+
+                            <!-- Display dots based on the stage value -->
+                            {% if result['stage'] == 1 %}
                             <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
-                            {% endif %}
-                            {% if 'red_dot_time' in result %}
+                            {% elif result['stage'] == 2 %}
+                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
                             <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
-                            {% endif %}
-                            {% if 'green_dot_time' in result %}
+                            {% elif result['stage'] == 3 %}
+                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
+                            <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
                             <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
+                            {% elif result['stage'] == -1 %}
+                            <span style="color: white;">Waiting...</span>
                             {% endif %}
                         </td>
                     </tr>
