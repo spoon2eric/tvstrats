@@ -28,7 +28,6 @@ MONGO_COLLECTION_MCB = "market_cipher_b"
 MONGO_COLLECTION_TRADES = "trades"
 
 mongo_client = MongoClient(MONGO_URI)
-print(MONGO_URI)
 db = mongo_client[MONGO_DATABASE]
 collection = db[MONGO_COLLECTION_MCB]
 trades_collection = db[MONGO_COLLECTION_TRADES]
