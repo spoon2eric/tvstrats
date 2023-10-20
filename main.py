@@ -164,8 +164,8 @@ def dots():
                                                                           {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
                     sort=[('TV Time', -1)]
                 )
-
-            print("record for", ticker, time_frame, ":", record)
+            #Debug statement
+            #print("record for", ticker, time_frame, ":", record)
 
             if not record:
                 continue
@@ -299,13 +299,13 @@ def find_big_green_dot(collection, ticker, time_frame):
         "Buy": "1"
     }, sort=[("TV Time", DESCENDING)])
     # Debug statement
-    print(f"Record for {ticker} and {time_frame}: {record}")
+    #print(f"Record for {ticker} and {time_frame}: {record}")
 
     if record:
         log_dot('Big Green', record, stage=1)
         # Debug statement
-        print(
-            f"Returning 'TV Time' for {ticker} and {time_frame}: {record['TV Time']}")
+        #print(
+        #    f"Returning 'TV Time' for {ticker} and {time_frame}: {record['TV Time']}")
         return record["TV Time"]
     return None
 
@@ -390,18 +390,26 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
                     }
                     update_data = {
                         "$setOnInsert": {
-                            "Trade": "Buy"
+                            "Trade": "Buy",
+                            "Message": 0
                         }
                     }
                     with MongoConnection("market_data") as db:
                         db['trades'].update_one(unique_criteria, update_data, upsert=True)
 
-                    try:
-                        # Notify Telegram
-                        message = f"Trade Alert! Buy for {ticker} at {record['TV Time']} (Time Frame: {time_frame})"
-                        send_telegram_message(message)
-                    except Exception as e:
-                        logging.error(f"Failed to send Telegram message. Error: {e}")
+                        # Check if the message for this trade has been sent already
+                        trade_record = db['trades'].find_one(unique_criteria)
+                        if trade_record and trade_record.get("Message") == 0:
+                            try:
+                                # Notify Telegram
+                                message = f"Trade Alert! Buy for {ticker} at {record['TV Time']} (Time Frame: {time_frame})"
+                                send_telegram_message(message)
+
+                                # Update the Message flag to 1
+                                db['trades'].update_one(unique_criteria, {"$set": {"Message": 1}})
+                            except Exception as e:
+                                print(f"In main, Failed to send Telegram message. Error: {e}")  # Print to console
+                                logging.error(f"Failed to send Telegram message. Error: {e}")
 
                     break
                 else:
