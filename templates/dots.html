@@ -116,12 +116,29 @@
             padding-bottom: 5px;
         }
 
+        .results {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            /* Creates spacing between flex items */
+        }
+
         .dot {
+            display: inline-block;
+            margin-right: 8px;
+            /* Creates spacing after the dot */
+        }
+
+        .money-flow {
+            display: inline-block;
+        }
+
+        /* .dot {
             height: 15px;
             width: 15px;
             border-radius: 50%;
             display: inline-block;
-        }
+        } */
 
         .red {
             background-color: red;
@@ -163,6 +180,15 @@
                         <td>{{ time_frame }}</td>
                         <td class="results">
                             <span class="dot" style="color: {{ dot_color }};">⬤</span> <!-- Dot Color -->
+                            {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
+                            {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
+                            <span style="color: {{ 'green' if mf_value > 0 else 'red' }}">
+                                MF: {{ mf_value|round(2) }}
+                            </span>
+                            <br>
+                            {% else %}
+                            Money Flow: Not Available
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

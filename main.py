@@ -148,10 +148,11 @@ def trades():
 
 @app.route('/dots')
 def dots():
+    money_flows = {}
     try:
         # 1. Get the tickers from dot_tickers.txt file using the function
         dot_tickers = get_all_dot_tickers_from_file()
-        print("Read tickers from dot_tickers.txt:", dot_tickers)
+        #print("Read tickers from dot_tickers.txt:", dot_tickers)
 
         results = []
 
@@ -164,18 +165,25 @@ def dots():
                                                                           {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
                     sort=[('TV Time', -1)]
                 )
-            #Debug statement
-            #print("record for", ticker, time_frame, ":", record)
 
-            if not record:
-                continue
+                if not record:
+                    continue
 
-            if record['Blue Wave Crossing UP'] != "null":
-                dot_color = 'green'
-            else:  # If UP is null, then DOWN should be not-null
-                dot_color = 'red'
+                if record['Blue Wave Crossing UP'] != "null":
+                    dot_color = 'green'
+                else:  # If UP is null, then DOWN should be not-null
+                    dot_color = 'red'
 
-            results.append((ticker, time_frame, dot_color))
+                results.append((ticker, time_frame, dot_color))
+
+                # Fetch the most recent "Mny Flow" for each ticker and time frame
+                current_record = db['market_cipher_b'].find_one(
+                    {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
+                if current_record and 'Mny Flow' in current_record:
+                    if ticker not in money_flows:
+                        money_flows[ticker] = {}
+                    money_flows[ticker][time_frame] = {
+                        'money_flow': current_record['Mny Flow']}
 
         # Convert results to a nested dictionary for easy use in the template
         grouped_results = {}
@@ -185,12 +193,16 @@ def dots():
             grouped_results[ticker][time_frame] = dot_color
 
         # 3. Render the dots.html template
-        return render_template('dots.html', grouped_results=grouped_results)
+        return render_template('dots.html', grouped_results=grouped_results, money_flow=money_flows)
 
     except Exception as e:
         # Handle errors and perhaps return a message to the user or log the error
         print(f"An error occurred: {e}")
         return render_template('error.html', error_message=str(e))
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('error.html', error_message=str(error)), 500
 
 
 def process_log_entry(log_entry):
