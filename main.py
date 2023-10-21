@@ -76,7 +76,13 @@ observer.start()
 
 ################################
 # New route
+@app.template_filter('format_datetime')
+def format_datetime(value, format="%m-%d %H:%M"):
+    if value is None:
+        return ""
+    return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").strftime(format)
 
+app.jinja_env.filters['format_datetime'] = format_datetime
 
 @app.route('/')
 def index():

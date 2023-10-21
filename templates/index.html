@@ -115,6 +115,79 @@
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
         }
+
+        .time-date {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            background-color: #3f3f3f;
+            /* Dark grey background */
+            color: #7e7e7e;
+            /* Light grey text */
+            margin-bottom: 0.5rem;
+        }
+
+        .money-flow {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .money-flow.positive {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .money-flow.negative {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .money-flow.not-available {
+            background-color: #3f3f3f;
+            color: #7e7e7e;
+        }
+
+        .money-flow .icon {
+            margin-right: 0.25rem;
+            color: rgba(16, 185, 129, 0.9);
+            width: 1rem;
+            height: 1rem;
+            vertical-align: middle;
+        }
+
+        @keyframes flash {
+
+            0%,
+            75% {
+                background-color: transparent;
+            }
+
+            50% {
+                background-color: rgba(16, 185, 129, 0.1);
+            }
+        }
+
+        .flash {
+            animation: flash 1s infinite;
+        }
+
+        .gold-border {
+            border: 2px solid gold;
+            border-radius: 5px;
+            /* Optional: for rounded corners */
+        }
+
+        .dark-green-border {
+            border: 2px solid darkgreen;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
@@ -145,42 +218,59 @@
                 <tbody>
                     <!-- Ticker details -->
                     {% for time_frame, result in details.items() %}
-                    <tr>
+                    <tr
+                        class="{{ 'flash' if result['stage'] == 2 else '' }} {{ 'gold-border' if result['stage'] == 3 }} {{ 'dark-green-border' if result['stage'] == 2 }}">
                         <td>{{ time_frame }}</td>
                         <td class="results">
-                            {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
-                            {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
-                            <span style="color: {{ 'green' if mf_value > 0 else 'red' }}">
-                                MF: {{ mf_value|round(2) }}
-                            </span>
-                            <br>
-                            {% else %}
-                            Money Flow: Not Available
-                            {% endif %}
+                            <!-- TV Time and Money Flow -->
+                            <div>
+                                <!-- Display the 'TV Time' value for Big Green Dot if present -->
+                                {% if result['first_big_green_dot_time'] %}
+                                <div class="time-date">
+                                    {{ result['first_big_green_dot_time']|format_datetime }} UTC
+                                </div>
+                                {% endif %}
+                            </div>
 
-                            <!-- Display the 'TV Time' value for Big Green Dot if present -->
-                            {% if result['first_big_green_dot_time'] %}
-                            {{ result['first_big_green_dot_time'] }}
-                            <br>
-                            {% endif %}
+                            <!-- Dots -->
+                            <div>
+                                <!-- Display dots based on the stage value -->
+                                {% if result['stage'] == 1 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                {% elif result['stage'] == 2 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
+                                <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                {% elif result['stage'] == 3 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
+                                <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
+                                <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
+                                <span class="icon">🚀</span>
+                                {% elif result['stage'] == -1 %}
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                {% endif %}
 
-                            <!-- Display dots based on the stage value -->
-                            {% if result['stage'] == 1 %}
-                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
-                            {% elif result['stage'] == 2 %}
-                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
-                            <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
-                            {% elif result['stage'] == 3 %}
-                            <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
-                            <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
-                            <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
-                            {% elif result['stage'] == -1 %}
-                            <span style="color: white;">Waiting...</span>
-                            {% endif %}
+                                <!-- Money Flow -->
+                                {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
+                                {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
+                                <div class="money-flow {{ 'positive' if mf_value > 0 else 'negative' }}">
+                                    <span class="icon">💰</span>
+                                    <span class="mf-text">MF: {{ mf_value|round(2) }}</span>
+                                </div>
+                                {% else %}
+                                <div class="money-flow not-available">MF: Waiting...</div>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
+
                     {% endfor %}
                 </tbody>
+
             </table>
         </div> <!-- End of card -->
         {% endfor %}
