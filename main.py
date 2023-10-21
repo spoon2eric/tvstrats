@@ -467,6 +467,7 @@ def analyze_data(db, config_file_path):
 
 
 setup_mongodb()
+print("tvstrats, version: v0.9.1")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)

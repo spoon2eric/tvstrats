@@ -53,7 +53,7 @@
 
         th,
         td {
-            padding: 8px;
+            padding: 4px;
             border-bottom: 1px solid #333;
             /* Dark table cell border */
             text-align: center;
@@ -114,6 +114,17 @@
             margin-bottom: 10px;
             border-bottom: 1px solid #ddd;
             padding-bottom: 5px;
+        }
+
+        .time-frame {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            background-color: #333;
+            /* Dark background */
+            color: #e0e0e0;
+            /* Light text color */
+            margin-bottom: 5px;
         }
 
         .time-date {
@@ -283,7 +294,7 @@
                     {% for time_frame, result in details.items() %}
                     <tr class="{{ 'flash' if result['stage'] == 2 else '' }} {{ 'gold-border' if result['stage'] == 3 }} {{ 'dark-green-border' if result['stage'] == 2 }}"
                         data-stage="{{ result['stage'] }}">
-                        <td>{{ time_frame }}</td>
+                        <td><span class="time-frame">{{ time_frame }}</span></td>
                         <td class="results">
                             <!-- TV Time and Money Flow -->
                             <div>
