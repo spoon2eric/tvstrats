@@ -130,15 +130,36 @@
         }
 
         .money-flow {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: 600;
         }
 
-        /* .dot {
-            height: 15px;
-            width: 15px;
-            border-radius: 50%;
-            display: inline-block;
-        } */
+        .money-flow.positive {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10B981;
+        }
+
+        .money-flow.negative {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: #EF4444;
+        }
+
+        .money-flow.not-available {
+            background-color: #3f3f3f;
+            color: #7e7e7e;
+        }
+
+        .money-flow .icon {
+            margin-right: 0.25rem;
+            color: rgba(16, 185, 129, 0.9);
+            width: 1rem;
+            height: 1rem;
+            vertical-align: middle;
+        }
 
         .red {
             background-color: red;
@@ -182,12 +203,12 @@
                             <span class="dot" style="color: {{ dot_color }};">⬤</span> <!-- Dot Color -->
                             {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
                             {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
-                            <span style="color: {{ 'green' if mf_value > 0 else 'red' }}">
-                                MF: {{ mf_value|round(2) }}
-                            </span>
-                            <br>
+                            <div class="money-flow {{ 'positive' if mf_value > 0 else 'negative' }}">
+                                <span class="icon">💰</span>
+                                <span class="mf-text">MF: {{ mf_value|round(2) }}</span>
+                            </div>
                             {% else %}
-                            Money Flow: Not Available
+                            <div class="money-flow not-available">MF: Waiting...</div>
                             {% endif %}
                         </td>
                     </tr>
@@ -197,7 +218,6 @@
         </div> <!-- End of card -->
         {% endfor %}
     </div> <!-- End of Flexbox container -->
-
 </body>
 
 </html>
