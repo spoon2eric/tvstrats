@@ -258,6 +258,29 @@
         .slider.round:before {
             border-radius: 50%;
         }
+
+        .price {
+            display: inline-flex;
+            align-items: center;
+            background-color: #232323;
+            /* Dark background */
+            padding: 5px 10px;
+            margin-left: 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            color: #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .price .price-icon {
+            font-size: 1.2em;
+            color: #e0e0e0;
+        }
+
+        .price .price-text {
+            font-weight: bold;
+            color: #e0e0e0;
+        }
     </style>
 </head>
 
@@ -276,11 +299,16 @@
         <a href="/trades">Trades</a>
     </nav>
 
-    <div class="container"> <!-- Flexbox container -->
+    <div class="container">
         {% for ticker, details in data.items() %}
-        <div class="card"> <!-- Start of card -->
-            <h2 class="card-header">{{ ticker }}</h2> <!-- Ticker name as card header -->
-
+        <div class="card">
+            <h2 class="card-header">
+                {{ ticker }}
+                <span class="price" id="price-{{ ticker }}">
+                    <span class="price-icon">💲</span>
+                    <span class="price-text" id="price-text-{{ ticker }}">Loading...</span>
+                </span>
+            </h2>
             <table>
                 <!-- Table header -->
                 <thead>
@@ -395,6 +423,60 @@
             });
         }
     </script>
+    <script>
+        function isStockSymbol(ticker) {
+            // List of stock symbols
+            const stockSymbols = ['ETHBTC','LINKBTC','LINKETH','PEPEUSDT', 'SPY', 'UDOW', 'SDOW', 'FNGU', 'FNGD', 'NVDA', 'TSLA'];
+
+            // Check if the ticker is in the list of stock symbols
+            return stockSymbols.includes(ticker);
+        }
+
+        async function updatePrices() {
+            document.querySelectorAll('.price').forEach(async (priceSpan) => {
+                let ticker = priceSpan.id.slice(6);  // Remove 'price-' prefix
+                const priceTextSpan = priceSpan.querySelector('.price-text');
+                const priceIconSpan = priceSpan.querySelector('.price-icon');
+
+                if (isStockSymbol(ticker)) {
+                    console.error('Stock symbol detected for', ticker);
+                    priceSpan.style.display = 'none';  // Hide the entire price span
+                    return;  // Exit the function early
+                }
+
+                if (ticker.endsWith('USDT')) {
+                    ticker = ticker.slice(0, -4);  // Remove 'USDT' if present
+                }
+
+                try {
+                    const response = await fetch(`/price/${ticker}`);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    const data = await response.json();
+
+                    if (data.error) {
+                        console.error('Error fetching price for', ticker, ':', data.error);
+                        priceSpan.style.display = 'none';  // Hide the entire price span
+                    } else if (data.price !== undefined && data.price !== null) {
+                        priceSpan.style.display = 'inline-flex';  // Show the price span
+                        priceTextSpan.textContent = `${data.price.toFixed(2)}`;
+                        priceIconSpan.style.display = 'inline';  // Show the dollar sign emoji
+                    } else {
+                        priceSpan.style.display = 'none';  // Hide the entire price span
+                    }
+                } catch (error) {
+                    console.error('Error fetching price for', ticker, ':', error);
+                    priceSpan.style.display = 'none';  // Hide the entire price span
+                }
+            });
+        }
+
+        setInterval(updatePrices, 600000);
+        updatePrices();
+
+    </script>
+
 </body>
 
 </html>

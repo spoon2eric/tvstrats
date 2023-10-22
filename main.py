@@ -1,3 +1,4 @@
+import json
 import os
 import io
 import sys
@@ -5,11 +6,9 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 from dateutil.parser import parse
 import logging
-from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
-# from flask_socketio import emit, send, SocketIO
+from flask import Flask, render_template, jsonify
 from pymongo import MongoClient, DESCENDING
-from pymongo.errors import PyMongoError
-# from strategies import PatternStrategy
+import requests
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from telegram_notifier import send_telegram_message
@@ -465,9 +464,38 @@ def analyze_data(db, config_file_path):
     # Return the results and the captured logs
     return results, new_stdout.getvalue().splitlines()
 
+COINMARKETCAP_API_KEY = '0ede2fd0-1a40-43c6-9744-1644064fefe4'
+
+@app.route('/price/<string:ticker_name>', methods=['GET'])
+def get_ticker_price(ticker_name):
+    url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
+    parameters = {
+        'symbol': ticker_name,
+        'convert': 'USD'
+    }
+    headers = {
+        'Accepts': 'application/json',
+        'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY,
+    }
+
+    session = requests.Session()
+    session.headers.update(headers)
+
+    try:
+        response = session.get(url, params=parameters)
+        data = json.loads(response.text)
+        if 'data' in data and ticker_name in data['data'] and 'quote' in data['data'][ticker_name] and 'USD' in data['data'][ticker_name]['quote'] and 'price' in data['data'][ticker_name]['quote']['USD']:
+            price = data['data'][ticker_name]['quote']['USD']['price']
+            return jsonify({'price': price})
+        else:
+            return jsonify({'error': 'Price data not available for the requested ticker'}), 404
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.TooManyRedirects) as e:
+        print(e)
+        return jsonify({'error': 'Failed to fetch ticker price'}), 500
+
 
 setup_mongodb()
-print("tvstrats, version: v0.9.3")
+logging.info("tvstrats, version: v0.9.3")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
