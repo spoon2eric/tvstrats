@@ -117,7 +117,7 @@ def index():
                 money_flows[ticker][time_frame] = {
                     'money_flow': current_record['Mny Flow']}
 
-    print(transformed_results)
+    #print(transformed_results)
 
     return render_template('index.html', data=transformed_results, money_flow=money_flows)
 
@@ -464,7 +464,7 @@ def analyze_data(db, config_file_path):
     # Return the results and the captured logs
     return results, new_stdout.getvalue().splitlines()
 
-COINMARKETCAP_API_KEY = '0ede2fd0-1a40-43c6-9744-1644064fefe4'
+COINMARKETCAP_API_KEY = os.getenv("COINMARKET_API_KEY")
 
 @app.route('/price/<string:ticker_name>', methods=['GET'])
 def get_ticker_price(ticker_name):
