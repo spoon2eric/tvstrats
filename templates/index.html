@@ -350,10 +350,27 @@
         {% endfor %}
     </div> <!-- End of Flexbox container -->
     <script>
-        document.getElementById('stageToggle').addEventListener('change', function () {
-            const isChecked = this.checked;
-            const cards = document.querySelectorAll('.card');
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const toggleButton = document.getElementById('stageToggle');
+            const toggleState = sessionStorage.getItem('toggleState');
 
+            // Apply the toggle state if it exists
+            if (toggleState !== null) {
+                const isToggledOn = toggleState === 'true';
+                toggleButton.checked = isToggledOn;
+                applyToggleState(isToggledOn);
+            }
+
+            // Add event listener for toggle changes
+            toggleButton.addEventListener('change', function () {
+                const isChecked = this.checked;
+                sessionStorage.setItem('toggleState', isChecked);
+                applyToggleState(isChecked);
+            });
+        });
+
+        function applyToggleState(isChecked) {
+            const cards = document.querySelectorAll('.card');
             cards.forEach(card => {
                 const rows = card.querySelectorAll('tbody tr');
                 let hasStage2or3 = false;
@@ -376,9 +393,8 @@
                     card.style.display = '';
                 }
             });
-        });
+        }
     </script>
-
 </body>
 
 </html>
