@@ -372,7 +372,7 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
             red_dot_value_str = record['Blue Wave Crossing Down']
             if red_dot_value_str is not None and red_dot_value_str != 'null':
                 red_dot_value = float(red_dot_value_str)
-                if red_dot_value > 2 and red_dot_value < 53:  # Change this value to find First Red Dot
+                if red_dot_value > 9 and red_dot_value < 53:  # Change this value to find First Red Dot
                     stage = 2
                     stage_2_red_dot_value = red_dot_value
                     log_dot('Red', record, stage=2)
@@ -395,7 +395,7 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
 
             if green_dot_value_str is not None and green_dot_value_str != 'null':
                 green_dot_value = float(green_dot_value_str)
-                if green_dot_value < 0:
+                if green_dot_value < -9: #Change value for Stage 3 green dot
                     stage = 3
                     log_dot('Green', record, stage=3)
 
