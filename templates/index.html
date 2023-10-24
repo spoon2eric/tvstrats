@@ -350,7 +350,8 @@
                                 <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
                                 <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
                                 <span class="icon">🚀</span>
-                                {% elif result['stage'] == -1 %}
+                                <!-- Start over if Red Dot Found or No Big Green Dot Found -->
+                                {% elif result['stage'] == -1 or result['stage'] == 4 %}
                                 <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
                                 <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
                                 <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>

@@ -360,9 +360,10 @@ def log_dot(dot_type, record, stage=None):
 
 def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
     stage = 1
+    #logging.info(f"in stage start for {ticker}/{time_frame}: {stage}")
     last_red_dot_value = float('-inf')
     stage_2_red_dot_value = None
-    last_processed_record = None
+    #last_processed_record = None
 
     records = get_records_after_time(
         collection, start_time, ticker, time_frame)
@@ -372,7 +373,7 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
             red_dot_value_str = record['Blue Wave Crossing Down']
             if red_dot_value_str is not None and red_dot_value_str != 'null':
                 red_dot_value = float(red_dot_value_str)
-                if red_dot_value > 9 and red_dot_value < 53:  # Change this value to find First Red Dot
+                if red_dot_value >= 9 and red_dot_value < 53:  # Change this value to find First Red Dot
                     stage = 2
                     stage_2_red_dot_value = red_dot_value
                     log_dot('Red', record, stage=2)
@@ -382,6 +383,8 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
                     last_red_dot_value = red_dot_value
 
         elif stage == 2:
+            #logging.info(f"Stage 2 for {ticker}/{time_frame}: {stage}")
+            #logging.info(f"#### Stage 2 record: {record}")
             red_dot_value_str = record['Blue Wave Crossing Down']
             green_dot_value_str = record['Blue Wave Crossing UP']
 
@@ -391,11 +394,12 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
                     print(
                         f"Breaking sequence: Found Red Dot for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {red_dot_value} which is higher than Stage 2 Red Dot value.")
                     stage = -1  # Indicate a broken sequence
+                    #logging.info("Breaking out of stage")
                     break
 
             if green_dot_value_str is not None and green_dot_value_str != 'null':
                 green_dot_value = float(green_dot_value_str)
-                if green_dot_value < -9: #Change value for Stage 3 green dot
+                if green_dot_value <= -9: #Change value for Stage 3 green dot
                     stage = 3
                     log_dot('Green', record, stage=3)
 
@@ -428,18 +432,35 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
                                 print(f"In main, Failed to send Telegram message. Error: {e}")  # Print to console
                                 logging.error(f"Failed to send Telegram message. Error: {e}")
 
-                    break
+                    #break
                 else:
                     log_dot('Green', record)
 
-        last_processed_record = record
+        elif stage == 3:
+            #logging.info(f"Stage 3 for {ticker}/{time_frame}: {stage} with {record}")
+            # Transition to stage 4 after processing stage 3
+            stage_3_tv_time_str = record['TV Time']
+            stage_3_tv_time = datetime.strptime(stage_3_tv_time_str, "%Y-%m-%dT%H:%M:%SZ")
+            stage_4_start_time = stage_3_tv_time + timedelta(seconds=1)
+            stage = 4
+            # Continue to the next iteration, or handle other logic as needed
 
-    if stage == 2:
-        print(
-            f"Stage 2 Red Dot found for {ticker} at {last_processed_record['TV Time']} (Time Frame: {time_frame}). Waiting for Stage 3 Green Dot.")
-    elif stage == -1:
-        print(
-            f"Sequence broken for {ticker} at {last_processed_record['TV Time']} (Time Frame: {time_frame}). Waiting for another Big Green Dot.")
+        elif stage == 4:
+            #logging.info(f"Stage 4 for {ticker}/{time_frame}: {stage} with {record}")
+            current_tv_time_str = record['TV Time']
+            current_tv_time = datetime.strptime(current_tv_time_str, "%Y-%m-%dT%H:%M:%SZ")
+            red_dot_value_str = record['Blue Wave Crossing Down']
+
+            if current_tv_time >= stage_4_start_time:
+                if red_dot_value_str is not None and red_dot_value_str != 'null':
+                    red_dot_value = float(red_dot_value_str)
+                    #logging.info(f"Stage 4: Found Red Dot for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {red_dot_value}. Transitioning to stage -1.")
+                    stage = -1  # Indicate a broken sequence
+                    # If you are in a loop, use 'continue' or 'break' depending on your logic
+                    # If this is a function, 'return stage' would be appropriate
+                else:
+                    continue
+                    #logging.info(f"Stage 4: No Red Dot found for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}). Continuing...")
 
     return stage
 
