@@ -373,14 +373,16 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
             red_dot_value_str = record['Blue Wave Crossing Down']
             if red_dot_value_str is not None and red_dot_value_str != 'null':
                 red_dot_value = float(red_dot_value_str)
-                if red_dot_value >= 9 and red_dot_value < 53:  # Change this value to find First Red Dot
+                if red_dot_value >= 9:  # Change this value to find First Red Dot
                     stage = 2
+                    #logging.info("Stage 2 set due to red_dot_value: %s", red_dot_value)
                     stage_2_red_dot_value = red_dot_value
                     log_dot('Red', record, stage=2)
                 else:
                     log_dot('Red', record)
                 if red_dot_value > last_red_dot_value and red_dot_value < 0:
                     last_red_dot_value = red_dot_value
+                    #logging.info("Red dot value is <0: %s", red_dot_value)
 
         elif stage == 2:
             #logging.info(f"Stage 2 for {ticker}/{time_frame}: {stage}")
@@ -391,6 +393,7 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
             if red_dot_value_str is not None and red_dot_value_str != 'null':
                 red_dot_value = float(red_dot_value_str)
                 if red_dot_value > stage_2_red_dot_value:
+                    #logging.info("red_dot_value: {red_dot_value}, stage_2_red_dot_value: {stage_2_red_dot_value}")
                     print(
                         f"Breaking sequence: Found Red Dot for {record['ticker']} at {record['TV Time']} (Time Frame: {record['Time Frame']}) with value {red_dot_value} which is higher than Stage 2 Red Dot value.")
                     stage = -1  # Indicate a broken sequence
@@ -401,6 +404,7 @@ def analyze_dots_for_sequence(collection, start_time, ticker, time_frame):
                 green_dot_value = float(green_dot_value_str)
                 if green_dot_value <= -9: #Change value for Stage 3 green dot
                     stage = 3
+                    #logging.info("Green Dot value <= -9, setting to Stage 3.")
                     log_dot('Green', record, stage=3)
 
                     # Insert/update the trade record after detecting Stage 3
