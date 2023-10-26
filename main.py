@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse
 import logging
 from flask import Flask, render_template, jsonify
+from flask_caching import Cache
 from pymongo import MongoClient, DESCENDING
 import requests
 from watchdog.observers import Observer
@@ -38,6 +39,8 @@ DATABASE = os.path.join(DATA_DIR, 'database.db')
 os.makedirs(DATA_DIR, exist_ok=True)
 
 app = Flask(__name__)
+cache = Cache(app, config={'CACHE_TYPE': 'simple'})
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Set default cache timeout to 5 minutes
 # app.secret_key = 'asdfasdf332fsdfawefsadf2f3daf'
 # socketio = SocketIO(app, cors_allowed_origins="*")
 
@@ -84,6 +87,7 @@ def format_datetime(value, format="%m-%d %H:%M"):
 app.jinja_env.filters['format_datetime'] = format_datetime
 
 @app.route('/')
+@cache.cached(timeout=250)  # Cache this route
 def index():
     money_flows = {}
     with MongoConnection("market_data") as db:
@@ -138,6 +142,7 @@ def group_results_by_ticker(results):
 
 
 @app.route('/trades')
+@cache.cached(timeout=250)  # Cache this route
 def trades():
     # Fetch the last 5 trades for each ticker from the trades collection
     tickers = trades_collection.distinct("Ticker")
@@ -152,6 +157,7 @@ def trades():
 
 
 @app.route('/dots')
+@cache.cached(timeout=250)  # Cache this route
 def dots():
     money_flows = {}
     try:
@@ -492,6 +498,7 @@ def analyze_data(db, config_file_path):
 COINMARKETCAP_API_KEY = os.getenv("COINMARKET_API_KEY")
 
 @app.route('/price/<string:ticker_name>', methods=['GET'])
+@cache.cached(timeout=600)  # Cache this route for 10 minutes
 def get_ticker_price(ticker_name):
     url = 'https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest'
     parameters = {
@@ -520,7 +527,7 @@ def get_ticker_price(ticker_name):
 
 
 setup_mongodb()
-logging.info("tvstrats, version: v0.9.6")
+logging.info("tvstrats, version: v0.9.7")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
