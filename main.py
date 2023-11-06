@@ -177,61 +177,102 @@ def trades():
 
     return render_template('trades.html', trades=trades_data)
 
-
 @app.route('/dots')
 @cache.cached(timeout=250)  # Cache this route
 def dots():
-    money_flows = {}
     try:
-        # 1. Get the tickers from dot_tickers.txt file using the function
+        # Get the tickers from dot_tickers.txt file using the function
         dot_tickers = get_all_dot_tickers_from_file()
-        #print("Read tickers from dot_tickers.txt:", dot_tickers)
 
-        results = []
+        grouped_results = {}
+        money_flows = {}
 
-        # 2. Query MongoDB for each ticker and timeframe
-        for ticker, time_frame in dot_tickers:
-            # Find the most recent record with a non-null Blue Wave Crossing UP or Down
-            with MongoConnection("market_data") as db:
-                record = db[MONGO_COLLECTION_MCB].find_one(
-                    {"Time Frame": time_frame, "ticker": ticker, "$or": [{"Blue Wave Crossing UP":
-                                                                          {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
-                    sort=[('TV Time', -1)]
+        # Query MongoDB for each ticker and time frame
+        with MongoClient(MONGO_URI) as mongo_client:
+            db = mongo_client[MONGO_DATABASE]
+            ui_collection = db[MONGO_COLLECTION_UI]
+
+            for ticker, time_frame in dot_tickers:
+                record = ui_collection.find_one(
+                    {"time_frame": time_frame, "ticker": ticker},
+                    sort=[('last_updated', -1)]
                 )
 
-                if not record:
-                    continue
+                if record:
+                    dot_color = 'green' if record.get('is_green_dot') == "TRUE" else 'red' if record.get('is_red_dot') == "TRUE" else 'grey'
+                    
+                    # Structure to hold ticker information
+                    if ticker not in grouped_results:
+                        grouped_results[ticker] = {}
+                    grouped_results[ticker][time_frame] = dot_color
+                    
+                    # Add money flow if it exists in the record
+                    if 'money_flow' in record:
+                        if ticker not in money_flows:
+                            money_flows[ticker] = {}
+                        money_flows[ticker][time_frame] = record['money_flow']
 
-                if record['Blue Wave Crossing UP'] != "null":
-                    dot_color = 'green'
-                else:  # If UP is null, then DOWN should be not-null
-                    dot_color = 'red'
-
-                results.append((ticker, time_frame, dot_color))
-
-                # Fetch the most recent "Mny Flow" for each ticker and time frame
-                current_record = db['market_cipher_b'].find_one(
-                    {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
-                if current_record and 'Mny Flow' in current_record:
-                    if ticker not in money_flows:
-                        money_flows[ticker] = {}
-                    money_flows[ticker][time_frame] = {
-                        'money_flow': current_record['Mny Flow']}
-
-        # Convert results to a nested dictionary for easy use in the template
-        grouped_results = {}
-        for ticker, time_frame, dot_color in results:
-            if ticker not in grouped_results:
-                grouped_results[ticker] = {}
-            grouped_results[ticker][time_frame] = dot_color
-
-        # 3. Render the dots.html template
+        # Render the dots.html template
         return render_template('dots.html', grouped_results=grouped_results, money_flow=money_flows)
 
     except Exception as e:
-        # Handle errors and perhaps return a message to the user or log the error
         print(f"An error occurred: {e}")
         return render_template('error.html', error_message=str(e))
+
+# @app.route('/dots')
+# @cache.cached(timeout=250)  # Cache this route
+# def dots():
+#     money_flows = {}
+#     try:
+#         # 1. Get the tickers from dot_tickers.txt file using the function
+#         dot_tickers = get_all_dot_tickers_from_file()
+#         #print("Read tickers from dot_tickers.txt:", dot_tickers)
+
+#         results = []
+
+#         # 2. Query MongoDB for each ticker and timeframe
+#         for ticker, time_frame in dot_tickers:
+#             # Find the most recent record with a non-null Blue Wave Crossing UP or Down
+#             with MongoConnection("market_data") as db:
+#                 record = db[MONGO_COLLECTION_MCB].find_one(
+#                     {"Time Frame": time_frame, "ticker": ticker, "$or": [{"Blue Wave Crossing UP":
+#                                                                           {"$ne": "null"}}, {"Blue Wave Crossing Down": {"$ne": "null"}}]},
+#                     sort=[('TV Time', -1)]
+#                 )
+
+#                 if not record:
+#                     continue
+
+#                 if record['Blue Wave Crossing UP'] != "null":
+#                     dot_color = 'green'
+#                 else:  # If UP is null, then DOWN should be not-null
+#                     dot_color = 'red'
+
+#                 results.append((ticker, time_frame, dot_color))
+
+#                 # Fetch the most recent "Mny Flow" for each ticker and time frame
+#                 current_record = db['market_cipher_b'].find_one(
+#                     {"Time Frame": time_frame, "ticker": ticker}, sort=[('TV Time', -1)])
+#                 if current_record and 'Mny Flow' in current_record:
+#                     if ticker not in money_flows:
+#                         money_flows[ticker] = {}
+#                     money_flows[ticker][time_frame] = {
+#                         'money_flow': current_record['Mny Flow']}
+
+#         # Convert results to a nested dictionary for easy use in the template
+#         grouped_results = {}
+#         for ticker, time_frame, dot_color in results:
+#             if ticker not in grouped_results:
+#                 grouped_results[ticker] = {}
+#             grouped_results[ticker][time_frame] = dot_color
+
+#         # 3. Render the dots.html template
+#         return render_template('dots.html', grouped_results=grouped_results, money_flow=money_flows)
+
+#     except Exception as e:
+#         # Handle errors and perhaps return a message to the user or log the error
+#         print(f"An error occurred: {e}")
+#         return render_template('error.html', error_message=str(e))
 
 @app.errorhandler(500)
 def internal_error(error):

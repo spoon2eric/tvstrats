@@ -127,8 +127,10 @@
             display: inline-block;
             padding: 5px 10px;
             border-radius: 15px;
-            background-color: #333; /* Dark background */
-            color: #e0e0e0; /* Light text color */
+            background-color: #333;
+            /* Dark background */
+            color: #e0e0e0;
+            /* Light text color */
             margin-bottom: 5px;
         }
 
@@ -185,22 +187,20 @@
         <h1>Dots</h1>
     </header>
     <nav>
-        <!-- Links to both pages -->
         <a href="/">Home</a>
         <a href="/dots">Dots</a>
         <a href="/trades">Trades</a>
     </nav>
-    <div class="container"> <!-- Start of Flexbox container -->
+    <div class="container">
         {% for ticker, time_frames in grouped_results.items() %}
-        <div class="card"> <!-- Start of card -->
-            <h2 class="card-header">{{ ticker }}</h2> <!-- Ticker name as card header -->
-
+        <div class="card">
+            <h2 class="card-header">{{ ticker }}</h2>
             <table>
-                <!-- Table header -->
                 <thead>
                     <tr>
                         <th>Time Frame</th>
-                        <th></th>
+                        <th>Dot</th>
+                        <th>Money Flow</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -208,24 +208,26 @@
                     <tr>
                         <td><span class="time-frame">{{ time_frame }}</span></td>
                         <td class="results">
-                            <span class="dot" style="color: {{ dot_color }};">⬤</span>
+                            <span class="dot" style="background-color: {{ dot_color }};"></span>
+                        </td>
+                        <td>
                             {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
-                            {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
+                            {% set mf_value = money_flow[ticker][time_frame]|float %}
                             <div class="money-flow {{ 'positive' if mf_value > 0 else 'negative' }}">
                                 <span class="icon">💰</span>
                                 <span class="mf-text">MF: {{ mf_value|round(2) }}</span>
                             </div>
                             {% else %}
-                            <div class="money-flow not-available">MF: Waiting...</div>
+                            <div class="money-flow not-available">MF: N/A</div>
                             {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
-        </div> <!-- End of card -->
+        </div>
         {% endfor %}
-    </div> <!-- End of Flexbox container -->
+    </div>
 </body>
 
 </html>
