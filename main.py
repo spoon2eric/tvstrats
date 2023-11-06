@@ -26,11 +26,13 @@ MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_IP}:{MONGO_PORT
 MONGO_DATABASE = "market_data"
 MONGO_COLLECTION_MCB = "market_cipher_b"
 MONGO_COLLECTION_TRADES = "trades"
+MONGO_COLLECTION_UI = "user_interface"
 
 mongo_client = MongoClient(MONGO_URI)
 db = mongo_client[MONGO_DATABASE]
 collection = db[MONGO_COLLECTION_MCB]
 trades_collection = db[MONGO_COLLECTION_TRADES]
+ui_collection = db[MONGO_COLLECTION_UI]
 
 # Directory of the script or current file.
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -87,6 +89,26 @@ def format_datetime(value, format="%m-%d %H:%M"):
 app.jinja_env.filters['format_datetime'] = format_datetime
 
 @app.route('/')
+def show_ui_collection():
+    with MongoClient(MONGO_URI) as mongo_client:
+        db = mongo_client[MONGO_DATABASE]
+        ui_collection = db[MONGO_COLLECTION_UI]
+
+        records = ui_collection.find({})
+        grouped_records = {}
+        for record in records:
+            # Convert ObjectId to string
+            record['_id'] = str(record['_id'])
+
+            ticker = record['ticker']
+            if ticker not in grouped_records:
+                grouped_records[ticker] = []
+            grouped_records[ticker].append(record)
+
+    # Pass the grouped records to the 'index.html' template
+    return render_template('index.html', grouped_records=grouped_records)
+
+@app.route('/orig')
 @cache.cached(timeout=250)  # Cache this route
 def index():
     money_flows = {}
@@ -123,7 +145,7 @@ def index():
 
     #print(transformed_results)
 
-    return render_template('index.html', data=transformed_results, money_flow=money_flows)
+    return render_template('index_orig.html', data=transformed_results, money_flow=money_flows)
 
 
 # End of New route
@@ -150,7 +172,7 @@ def trades():
 
     for ticker in tickers:
         trades_for_ticker = list(trades_collection.find(
-            {'Ticker': ticker}).sort([('TV Time', -1)]).limit(10))
+            {'Ticker': ticker}).sort([('TV Time', -1)]).limit(5))
         trades_data.extend(trades_for_ticker)
 
     return render_template('trades.html', trades=trades_data)

@@ -286,21 +286,21 @@
 
 <body>
     <header>
-        <h1>UI Collection</h1>
+        <h1>MTBT Strategy</h1>
         <label class="switch">
             <input type="checkbox" id="stageToggle">
             <span class="slider round"></span>
         </label>
     </header>
     <nav>
-        <!-- Update these links as needed -->
+        <!-- Links to pages -->
         <a href="/">Home</a>
         <a href="/dots">Dots</a>
         <a href="/trades">Trades</a>
     </nav>
 
     <div class="container">
-        {% for ticker, records in grouped_records.items() %}
+        {% for ticker, details in data.items() %}
         <div class="card">
             <h2 class="card-header">
                 {{ ticker }}
@@ -319,57 +319,61 @@
                 </thead>
                 <tbody>
                     <!-- Ticker details -->
-                    {% for record in records %}
-                    <tr class="{{ 'flash' if record['stage'] == 2 else '' }} {{ 'gold-border' if record['stage'] == 3 }} {{ 'dark-green-border' if record['stage'] == 2 }}"
-                        data-stage="{{ record['stage'] }}">
-                        <td><span class="time-frame">{{ record['time_frame'] }}</span></td>
+                    {% for time_frame, result in details.items() %}
+                    <tr class="{{ 'flash' if result['stage'] == 2 else '' }} {{ 'gold-border' if result['stage'] == 3 }} {{ 'dark-green-border' if result['stage'] == 2 }}"
+                        data-stage="{{ result['stage'] }}">
+                        <td><span class="time-frame">{{ time_frame }}</span></td>
                         <td class="results">
+                            <!-- TV Time and Money Flow -->
                             <div>
                                 <!-- Display the 'TV Time' value for Big Green Dot if present -->
-                                {% if record['big_green_dot_time'] %}
+                                {% if result['first_big_green_dot_time'] %}
                                 <div class="time-date">
-                                    {{ record['big_green_dot_time'] }} UTC
+                                    {{ result['first_big_green_dot_time']|format_datetime }} UTC
                                 </div>
                                 {% endif %}
                             </div>
+
                             <!-- Dots -->
-                            <div class="dots">
-                                {% if record['stage'] == 1 %}
-                                <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
-                                {% elif record['stage'] == 2 %}
-                                <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
+                            <div>
+                                <!-- Display dots based on the stage value -->
+                                {% if result['stage'] == 1 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                {% elif result['stage'] == 2 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
                                 <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
-                                {% elif record['stage'] == 3 %}
-                                <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                {% elif result['stage'] == 3 %}
+                                <span class="dot" style="color: green;">⬤</span> <!-- Big Green Dot -->
                                 <span class="dot" style="color: red;">⬤</span> <!-- Red Dot -->
                                 <span class="dot" style="color: green;">⬤</span> <!-- Green Dot -->
-                                {% else %} <!-- Assuming any other value should display 3 grey dots -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
-                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
+                                <span class="icon">🚀</span>
+                                <!-- Start over if Red Dot Found or No Big Green Dot Found -->
+                                {% elif result['stage'] == -1 or result['stage'] == 4 %}
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
+                                <span class="dot" style="color: rgb(87, 87, 87);">⬤</span>
                                 {% endif %}
-                            </div>
 
-
-                            <!-- Money Flow -->
-                            <div
-                                class="money-flow {{ 'positive' if record.get('money_flow', 0)|float > 0 else 'negative' }}">
-                                <span class="icon">💰</span>
-                                <span class="mf-text">MF:
-                                    {% if record.get('money_flow') %}
-                                    {{ record['money_flow']|float|round(2) }}
-                                    {% else %}
-                                    Waiting...
-                                    {% endif %}
-                                </span>
+                                <!-- Money Flow -->
+                                {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
+                                {% set mf_value = money_flow[ticker][time_frame].money_flow|float %}
+                                <div class="money-flow {{ 'positive' if mf_value > 0 else 'negative' }}">
+                                    <span class="icon">💰</span>
+                                    <span class="mf-text">MF: {{ mf_value|round(2) }}</span>
+                                </div>
+                                {% else %}
+                                <div class="money-flow not-available">MF: Waiting...</div>
+                                {% endif %}
                             </div>
                         </td>
                     </tr>
+
                     {% endfor %}
                 </tbody>
+
             </table>
         </div> <!-- End of card -->
         {% endfor %}
@@ -420,6 +424,60 @@
             });
         }
     </script>
+    <script>
+        function isStockSymbol(ticker) {
+            // List of stock symbols
+            const stockSymbols = ['ETHBTC','LINKBTC','LINKETH','PEPEUSDT', 'SPY', 'UDOW', 'SDOW', 'FNGU', 'FNGD', 'NVDA', 'TSLA'];
+
+            // Check if the ticker is in the list of stock symbols
+            return stockSymbols.includes(ticker);
+        }
+
+        async function updatePrices() {
+            document.querySelectorAll('.price').forEach(async (priceSpan) => {
+                let ticker = priceSpan.id.slice(6);  // Remove 'price-' prefix
+                const priceTextSpan = priceSpan.querySelector('.price-text');
+                const priceIconSpan = priceSpan.querySelector('.price-icon');
+
+                if (isStockSymbol(ticker)) {
+                    console.error('Stock symbol detected for', ticker);
+                    priceSpan.style.display = 'none';  // Hide the entire price span
+                    return;  // Exit the function early
+                }
+
+                if (ticker.endsWith('USDT')) {
+                    ticker = ticker.slice(0, -4);  // Remove 'USDT' if present
+                }
+
+                try {
+                    const response = await fetch(`/price/${ticker}`);
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    const data = await response.json();
+
+                    if (data.error) {
+                        console.error('Error fetching price for', ticker, ':', data.error);
+                        priceSpan.style.display = 'none';  // Hide the entire price span
+                    } else if (data.price !== undefined && data.price !== null) {
+                        priceSpan.style.display = 'inline-flex';  // Show the price span
+                        priceTextSpan.textContent = `${data.price.toFixed(2)}`;
+                        priceIconSpan.style.display = 'inline';  // Show the dollar sign emoji
+                    } else {
+                        priceSpan.style.display = 'none';  // Hide the entire price span
+                    }
+                } catch (error) {
+                    console.error('Error fetching price for', ticker, ':', error);
+                    priceSpan.style.display = 'none';  // Hide the entire price span
+                }
+            });
+        }
+
+        setInterval(updatePrices, 600000);
+        updatePrices();
+
+    </script>
+
 </body>
 
 </html>
