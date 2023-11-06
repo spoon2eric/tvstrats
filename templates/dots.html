@@ -181,7 +181,6 @@
         }
     </style>
 </head>
-
 <body>
     <header>
         <h1>Dots</h1>
@@ -208,16 +207,20 @@
                     <tr>
                         <td><span class="time-frame">{{ time_frame }}</span></td>
                         <td class="results">
-                            <span class="dot" style="background-color: {{ dot_color }};"></span>
+                            <!-- The dot color is set by adding the corresponding class -->
+                            <span class="dot {{ dot_color }}"></span>
                         </td>
                         <td>
+                            <!-- Check if money flow data is available for the current ticker and time frame -->
                             {% if money_flow.get(ticker) and money_flow[ticker].get(time_frame) %}
+                            <!-- Convert the money flow value to a float and apply formatting -->
                             {% set mf_value = money_flow[ticker][time_frame]|float %}
                             <div class="money-flow {{ 'positive' if mf_value > 0 else 'negative' }}">
                                 <span class="icon">💰</span>
                                 <span class="mf-text">MF: {{ mf_value|round(2) }}</span>
                             </div>
                             {% else %}
+                            <!-- Show a placeholder when money flow data is not available -->
                             <div class="money-flow not-available">MF: N/A</div>
                             {% endif %}
                         </td>
@@ -229,5 +232,4 @@
         {% endfor %}
     </div>
 </body>
-
 </html>
