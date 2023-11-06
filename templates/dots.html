@@ -51,41 +51,24 @@
             border-collapse: collapse;
         }
 
-        th,
-        td {
-            padding: 8px;
-            border-bottom: 1px solid #333;
-            /* Dark table cell border */
-            text-align: center;
-        }
-
         th {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            text-align: center;
+            vertical-align: middle;
             background-color: #333;
-            /* Dark table header background */
             color: #e0e0e0;
-            /* Table header text color */
         }
 
-        td.results {
-            text-align: left;
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #333;
+            text-align: center;
+            vertical-align: middle;
         }
 
         tr:hover {
             background-color: #232323;
-            /* Lighter row hover effect */
-        }
-
-        tr.ticker-header {
-            background-color: #2d2d2d;
-            /* Differentiated dark ticker header background */
-            color: #ffffff;
-            /* White text for ticker header */
-            font-weight: bold;
-        }
-
-        td span.dot {
-            font-size: 24px;
-            vertical-align: middle;
         }
 
         /* Container for all cards */
@@ -94,7 +77,6 @@
             flex-wrap: wrap;
             justify-content: space-between;
             gap: 20px;
-            /* Adjust for desired space between cards */
         }
 
         /* Individual card styles */
@@ -106,7 +88,6 @@
             margin: 15px 0;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             min-width: 300px;
-            /* Adjust based on desired minimum card width */
         }
 
         .card-header {
@@ -116,30 +97,37 @@
             padding-bottom: 5px;
         }
 
+        /* Results column styling */
         .results {
             display: flex;
             align-items: center;
-            gap: 8px;
-            /* Creates spacing between flex items */
+            /* This will vertically center the children */
+            justify-content: center;
+            /* This will horizontally center the children */
         }
 
+        /* Time frame styles */
         .time-frame {
             display: inline-block;
             padding: 5px 10px;
             border-radius: 15px;
             background-color: #333;
-            /* Dark background */
             color: #e0e0e0;
-            /* Light text color */
-            margin-bottom: 5px;
         }
 
+        /* Dot styles */
         .dot {
             display: inline-block;
-            margin-right: 8px;
-            /* Creates spacing after the dot */
+            border-radius: 50%;
+            width: 20px;
+            /* Larger dot size */
+            height: 20px;
+            /* Larger dot size */
+            background-color: #333;
+            /* Will be overridden by color classes */
         }
 
+        /* Money flow styles */
         .money-flow {
             display: inline-flex;
             align-items: center;
@@ -172,15 +160,24 @@
             vertical-align: middle;
         }
 
-        .red {
-            background-color: red;
+        /* Color classes for dots */
+        .green {
+            background-color: green !important;
+            /* Override green color */
         }
 
-        .green {
-            background-color: green;
+        .red {
+            background-color: red !important;
+            /* Override red color */
+        }
+
+        .grey {
+            background-color: grey !important;
+            /* Override grey color */
         }
     </style>
 </head>
+
 <body>
     <header>
         <h1>Dots</h1>
@@ -190,6 +187,7 @@
         <a href="/dots">Dots</a>
         <a href="/trades">Trades</a>
     </nav>
+
     <div class="container">
         {% for ticker, time_frames in grouped_results.items() %}
         <div class="card">
@@ -221,7 +219,7 @@
                             </div>
                             {% else %}
                             <!-- Show a placeholder when money flow data is not available -->
-                            <div class="money-flow not-available">MF: N/A</div>
+                            <div class="money-flow not-available">MF: Waiting...</div>
                             {% endif %}
                         </td>
                     </tr>
@@ -232,4 +230,5 @@
         {% endfor %}
     </div>
 </body>
+
 </html>
