@@ -549,7 +549,7 @@ def get_ticker_price(ticker_name):
 
 
 setup_mongodb()
-logging.info("tvstrats, version: v0.9.7")
+logging.info("tvstrats, version: v0.9.8")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
