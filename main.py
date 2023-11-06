@@ -200,7 +200,7 @@ def dots():
 
                 if record:
                     dot_color = 'green' if record.get('is_green_dot') == "TRUE" else 'red' if record.get('is_red_dot') == "TRUE" else 'grey'
-                    logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Dot Color: {dot_color}")
+                    #logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Dot Color: {dot_color}")
                     
                     # Structure to hold ticker information
                     if ticker not in grouped_results:
@@ -212,10 +212,10 @@ def dots():
                         if ticker not in money_flows:
                             money_flows[ticker] = {}
                         money_flows[ticker][time_frame] = record['money_flow']
-                        logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Money Flow: {record['money_flow']}")
+                        #logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Money Flow: {record['money_flow']}")
 
-        logging.debug(f"Grouped Results: {grouped_results}")
-        logging.debug(f"Money Flows: {money_flows}")
+        #logging.debug(f"Grouped Results: {grouped_results}")
+        #logging.debug(f"Money Flows: {money_flows}")
 
         # Render the dots.html template
         return render_template('dots.html', grouped_results=grouped_results, money_flow=money_flows)
