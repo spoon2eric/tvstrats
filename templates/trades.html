@@ -120,8 +120,10 @@
             display: inline-block;
             padding: 5px 10px;
             border-radius: 15px;
-            background-color: #333; /* Dark background */
-            color: #e0e0e0; /* Light text color */
+            background-color: #333;
+            /* Dark background */
+            color: #e0e0e0;
+            /* Light text color */
             margin-bottom: 5px;
         }
     </style>
@@ -140,8 +142,8 @@
     </nav>
     <div class="container"> <!-- Flexbox container -->
 
-        <!-- Group by ticker -->
-        {% for ticker, trades_list in trades|groupby('Ticker') %}
+        <!-- Iterate over each ticker and its trades -->
+        {% for ticker, trades_list in trades.items() %}
         <div class="card"> <!-- Start of card -->
             <h2 class="card-header">{{ ticker }}</h2> <!-- Ticker name as card header -->
 
@@ -160,7 +162,8 @@
                     <tr>
                         <td><span class="time-frame">{{ trade['Time Frame'] }}</span></td>
                         <td>{{ trade['TV Time'] }}</td>
-                        <td class="results">{{ trade.Trade }}</td>
+                        <td class="results">{{ trade['Trade'] }}</td>
+                        <!-- Make sure to use ['Trade'] instead of .Trade -->
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -107,24 +108,34 @@ def show_ui_collection():
                 grouped_records[ticker]['price'] = "{:.2f}".format(
                     record['price'])
 
-    # Pass the grouped records to the 'index.html' template
-    return render_template('index.html', grouped_records=grouped_records)
+    # Sort the grouped records by ticker keys
+    sorted_grouped_records = dict(sorted(grouped_records.items()))
+
+    # Pass the sorted records to the 'index.html' template
+    return render_template('index.html', grouped_records=sorted_grouped_records)
 
 
 @app.route('/trades')
 @cache.cached(timeout=250)  # Cache this route
 def trades():
-    # Fetch the last 5 trades for each ticker from the trades collection
-    tickers = trades_collection.distinct("Ticker")
-    trades_data = []
+    # Fetch the distinct tickers and sort them alphabetically
+    tickers = sorted(trades_collection.distinct("Ticker"))
 
+    trades_data = []
     for ticker in tickers:
+        # Fetch the last 5 trades for this ticker
         trades_for_ticker = list(trades_collection.find(
             {'Ticker': ticker}).sort([('TV Time', -1)]).limit(5))
-        trades_data.extend(trades_for_ticker)
+        # Add a tuple of ticker and its trades to the list
+        trades_data.append((ticker, trades_for_ticker))
 
-    return render_template('trades.html', trades=trades_data)
+    # Sort trades_data based on the ticker (which is the first item of each tuple)
+    trades_data.sort(key=lambda x: x[0])
 
+    # If you need to pass it to the template as a dictionary, you can convert it
+    trades_dict = {ticker: trades for ticker, trades in trades_data}
+
+    return render_template('trades.html', trades=trades_dict)
 
 @app.route('/dots')
 @cache.cached(timeout=250)  # Cache this route
@@ -150,7 +161,6 @@ def dots():
                 if record:
                     dot_color = 'green' if record.get('is_green_dot') == "TRUE" else 'red' if record.get(
                         'is_red_dot') == "TRUE" else 'grey'
-                    # logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Dot Color: {dot_color}")
 
                     # Structure to hold ticker information
                     if ticker not in grouped_results:
@@ -162,13 +172,12 @@ def dots():
                         if ticker not in money_flows:
                             money_flows[ticker] = {}
                         money_flows[ticker][time_frame] = record['money_flow']
-                        # logging.debug(f"Ticker: {ticker}, Time Frame: {time_frame}, Money Flow: {record['money_flow']}")
 
-        # logging.debug(f"Grouped Results: {grouped_results}")
-        # logging.debug(f"Money Flows: {money_flows}")
+        # Sort grouped_results by tickers alphabetically
+        sorted_grouped_results = OrderedDict(sorted(grouped_results.items()))
 
-        # Render the dots.html template
-        return render_template('dots.html', grouped_results=grouped_results, money_flow=money_flows)
+        # Render the dots.html template with the sorted tickers
+        return render_template('dots.html', grouped_results=sorted_grouped_results, money_flow=money_flows)
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -198,7 +207,7 @@ def get_all_dot_tickers_from_file():
     return dot_tickers
 
 
-logging.info("tvstrats, version: v0.9.10")
+logging.info("tvstrats, version: v0.9.11")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
