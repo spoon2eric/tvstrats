@@ -300,14 +300,19 @@
     </nav>
 
     <div class="container">
-        {% for ticker, records in grouped_records.items() %}
+        {% for ticker, data in grouped_records.items() %}
         <div class="card">
             <h2 class="card-header">
                 {{ ticker }}
+                <!-- This condition checks if there is a price and displays it; otherwise, it does not render the span -->
+                {% if data['price'] %}
                 <span class="price" id="price-{{ ticker }}">
                     <span class="price-icon">💲</span>
-                    <span class="price-text" id="price-text-{{ ticker }}">Loading...</span>
+                    <!-- Here we format the price to show only two decimal places -->
+                    <span class="price-text" id="price-text-{{ ticker }}">{{ '%0.2f'|format(data['price']|float)
+                        }}</span>
                 </span>
+                {% endif %}
             </h2>
             <table>
                 <!-- Table header -->
@@ -319,14 +324,14 @@
                 </thead>
                 <tbody>
                     <!-- Ticker details -->
-                    {% for record in records %}
+                    {% for record in data['records'] %}
                     <tr class="{{ 'flash' if record['stage'] == 2 else '' }} {{ 'gold-border' if record['stage'] == 3 }} {{ 'dark-green-border' if record['stage'] == 2 }}"
                         data-stage="{{ record['stage'] }}">
                         <td><span class="time-frame">{{ record['time_frame'] }}</span></td>
                         <td class="results">
                             <div>
-                                <!-- Display the 'TV Time' value for Big Green Dot if present -->
-                                {% if record['big_green_dot_time'] %}
+                                <!-- Display the 'TV Time' value for Big Green Dot if stage is 1, 2, or 3 -->
+                                {% if record['big_green_dot_time'] and record['stage'] in [1, 2, 3] %}
                                 <div class="time-date">
                                     {{ record['big_green_dot_time'] }} UTC
                                 </div>
@@ -351,20 +356,19 @@
                                 <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
                                 <span class="dot" style="color: rgb(87, 87, 87);">⬤</span> <!-- Grey Dot -->
                                 {% endif %}
-                            </div>
-
-
-                            <!-- Money Flow -->
-                            <div
-                                class="money-flow {{ 'positive' if record.get('money_flow', 0)|float > 0 else 'negative' }}">
-                                <span class="icon">💰</span>
-                                <span class="mf-text">MF:
-                                    {% if record.get('money_flow') %}
-                                    {{ record['money_flow']|float|round(2) }}
-                                    {% else %}
-                                    Waiting...
-                                    {% endif %}
-                                </span>
+                                <!-- Money Flow -->
+                                <div
+                                    class="money-flow {{ 'positive' if record.get('money_flow', 0)|float > 0 else 'negative' }}">
+                                    <span class="icon">💰</span>
+                                    <span class="mf-text">MF:
+                                        {% if record.get('money_flow') %}
+                                        <!-- Here we also format the money flow to show only two decimal places -->
+                                        {{ '%0.2f'|format(record['money_flow']|float) }}
+                                        {% else %}
+                                        Waiting...
+                                        {% endif %}
+                                    </span>
+                                </div>
                             </div>
                         </td>
                     </tr>
@@ -419,59 +423,6 @@
                 }
             });
         }
-    </script>
-    <script>
-        function isStockSymbol(ticker) {
-            // List of stock symbols
-            const stockSymbols = ['ETHBTC','LINKBTC','LINKETH','PEPEUSDT', 'SPY', 'UDOW', 'SDOW', 'FNGU', 'FNGD', 'NVDA', 'TSLA'];
-
-            // Check if the ticker is in the list of stock symbols
-            return stockSymbols.includes(ticker);
-        }
-
-        async function updatePrices() {
-            document.querySelectorAll('.price').forEach(async (priceSpan) => {
-                let ticker = priceSpan.id.slice(6);  // Remove 'price-' prefix
-                const priceTextSpan = priceSpan.querySelector('.price-text');
-                const priceIconSpan = priceSpan.querySelector('.price-icon');
-
-                if (isStockSymbol(ticker)) {
-                    console.error('Stock symbol detected for', ticker);
-                    priceSpan.style.display = 'none';  // Hide the entire price span
-                    return;  // Exit the function early
-                }
-
-                if (ticker.endsWith('USDT')) {
-                    ticker = ticker.slice(0, -4);  // Remove 'USDT' if present
-                }
-
-                try {
-                    const response = await fetch(`/price/${ticker}`);
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok ' + response.statusText);
-                    }
-                    const data = await response.json();
-
-                    if (data.error) {
-                        console.error('Error fetching price for', ticker, ':', data.error);
-                        priceSpan.style.display = 'none';  // Hide the entire price span
-                    } else if (data.price !== undefined && data.price !== null) {
-                        priceSpan.style.display = 'inline-flex';  // Show the price span
-                        priceTextSpan.textContent = `${data.price.toFixed(2)}`;
-                        priceIconSpan.style.display = 'inline';  // Show the dollar sign emoji
-                    } else {
-                        priceSpan.style.display = 'none';  // Hide the entire price span
-                    }
-                } catch (error) {
-                    console.error('Error fetching price for', ticker, ':', error);
-                    priceSpan.style.display = 'none';  // Hide the entire price span
-                }
-            });
-        }
-
-        setInterval(updatePrices, 600000);
-        updatePrices();
-
     </script>
 </body>
 
