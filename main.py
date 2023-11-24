@@ -73,10 +73,9 @@ observer.start()
 
 @app.template_filter('format_datetime')
 def format_datetime(value, format="%m-%d %H:%M"):
-    if value is None:
-        return ""
+    if value is None or value == 'Undefined':
+        return ""  # Return an empty string when the value is undefined or 'Undefined'
     return datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ").strftime(format)
-
 
 app.jinja_env.filters['format_datetime'] = format_datetime
 
@@ -182,6 +181,17 @@ def dots():
     except Exception as e:
         print(f"An error occurred: {e}")
         return render_template('error.html', error_message=str(e))
+
+
+@app.route('/ml-ai')
+def show_ml_ai_alerts():
+    with MongoClient(MONGO_URI) as mongo_client:
+        db = mongo_client[MONGO_DATABASE]
+        ml_alerts_collection = db['ml_alerts']
+
+        ml_alerts = ml_alerts_collection.find({})
+        
+        return render_template('ml-ai.html', ml_alerts=ml_alerts)
 
 
 @app.errorhandler(500)
