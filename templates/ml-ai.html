@@ -159,11 +159,12 @@
     </nav>
 
     <div class="container">
-        {% for alert in ml_alerts %}
+        {% for ticker, time_frames in grouped_alerts.items() %}
         <div class="card">
             <h2 class="card-header">
-                {{ alert['Ticker'] }}
+                {{ ticker }}
             </h2>
+            {% for time_frame, alerts in time_frames.items() %}
             <table>
                 <!-- Table header -->
                 <thead>
@@ -176,17 +177,21 @@
                 </thead>
                 <tbody>
                     <!-- Alert details -->
+                    {% for alert in alerts %}
                     <tr>
-                        <td>{{ alert['Time Frame'] }}</td>
+                        <td>{{ time_frame }}</td>
                         <td>{{ alert['TV Time'] | format_datetime }}</td>
                         <td>{{ alert.close }}</td>
                         <td>{{ alert.Signal }}</td>
                     </tr>
+                    {% endfor %}
                 </tbody>
             </table>
+            {% endfor %}
         </div> <!-- End of card -->
         {% endfor %}
     </div> <!-- End of Flexbox container -->
+
 </body>
 
 </html>

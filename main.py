@@ -190,8 +190,19 @@ def show_ml_ai_alerts():
         ml_alerts_collection = db['ml_alerts']
 
         ml_alerts = ml_alerts_collection.find({})
-        
-        return render_template('ml-ai.html', ml_alerts=ml_alerts)
+
+        # Group alerts based on Ticker and Time Frame
+        grouped_alerts = {}
+        for alert in ml_alerts:
+            ticker = alert['Ticker']
+            time_frame = alert['Time Frame']
+            if ticker not in grouped_alerts:
+                grouped_alerts[ticker] = {}
+            if time_frame not in grouped_alerts[ticker]:
+                grouped_alerts[ticker][time_frame] = []
+            grouped_alerts[ticker][time_frame].append(alert)
+
+        return render_template('ml-ai.html', grouped_alerts=grouped_alerts)
 
 
 @app.errorhandler(500)
