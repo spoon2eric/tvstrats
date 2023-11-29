@@ -93,25 +93,35 @@ def show_ui_collection():
             # Convert ObjectId to string
             record['_id'] = str(record['_id'])
 
-            ticker = record['ticker']
-            # Ensure the ticker key exists in the dictionary
-            if ticker not in grouped_records:
-                grouped_records[ticker] = {'records': [], 'price': None}
+            # Check if 'ticker' key exists in the record
+            if 'ticker' in record:
+                ticker = record['ticker']
 
-            # Append the record to the ticker's record list
-            grouped_records[ticker]['records'].append(record)
+                # Ensure the ticker key exists in the dictionary
+                if ticker not in grouped_records:
+                    grouped_records[ticker] = {'records': [], 'price': None}
 
-            # Check if the current record has a newer price and update accordingly
-            if 'price' in record and (grouped_records[ticker]['price'] is None or record['last_updated'] > grouped_records[ticker]['records'][-1]['last_updated']):
-                # Format price to two decimal places before storing it
-                grouped_records[ticker]['price'] = "{:.2f}".format(
-                    record['price'])
+                # Append the record to the ticker's record list
+                grouped_records[ticker]['records'].append(record)
+
+                # Check if the current record has a newer price and update accordingly
+                if 'price' in record and (grouped_records[ticker]['price'] is None or record['last_updated'] > grouped_records[ticker]['records'][-1]['last_updated']):
+                    # Format price to two decimal places before storing it
+                    try:
+                        grouped_records[ticker]['price'] = "{:.2f}".format(float(record['price']))
+                    except ValueError:
+                        # Handle the case where the price is not a valid number
+                        grouped_records[ticker]['price'] = "N/A"
+            else:
+                # Handle the case where 'ticker' key is missing in the record
+                print(f"'ticker' key not found in record: {record}")
 
     # Sort the grouped records by ticker keys
     sorted_grouped_records = dict(sorted(grouped_records.items()))
 
     # Pass the sorted records to the 'index.html' template
     return render_template('index.html', grouped_records=sorted_grouped_records)
+
 
 
 @app.route('/trades')
@@ -228,7 +238,7 @@ def get_all_dot_tickers_from_file():
     return dot_tickers
 
 
-logging.info("tvstrats, version: v0.9.14")
+logging.info("tvstrats, version: v0.9.15")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
