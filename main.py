@@ -228,7 +228,7 @@ def get_all_dot_tickers_from_file():
     return dot_tickers
 
 
-logging.info("tvstrats, version: v0.9.13")
+logging.info("tvstrats, version: v0.9.14")
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', debug=False, port=5000)
