@@ -41,7 +41,7 @@ app.config['CACHE_DEFAULT_TIMEOUT'] = 300
 
 class MongoConnection:
     def __init__(self, db_name):
-        self.MONGO_URI = f"mongodb://spoon2eric:Mtu19355%24@192.168.79.50:27017/?authMechanism=DEFAULT"
+        self.MONGO_URI = f"mongodb://{MONGO_USERNAME}:{MONGO_PASSWORD}@{MONGO_IP}:{MONGO_PORT}/?authMechanism=DEFAULT"
         self.db_name = db_name
 
     def __enter__(self):
